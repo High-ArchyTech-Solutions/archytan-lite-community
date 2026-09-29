@@ -29,7 +29,7 @@ bash quickstart.sh
 In Windows PowerShell:
 
 ```powershell
-Invoke-WebRequest https://raw.githubusercontent.com/High-ArchyTech-Solutions/archytan-lite-community/main/quickstart/quickstart.ps1 -OutFile quickstart.ps1
+Invoke-WebRequest https://raw.githubusercontent.com/High-ArchyTech-Solutions/archytan-lite-community/main/quickstart/quickstart.ps1 -OutFile quickstart.ps1 -UseBasicParsing
 powershell -ExecutionPolicy Bypass -File quickstart.ps1
 ```
 
@@ -187,8 +187,10 @@ In Windows PowerShell:
 
 ```powershell
 $base = 'https://github.com/High-ArchyTech-Solutions/archytan-lite-community/releases/latest/download'
-Invoke-WebRequest "$base/archytan-mcp-gate-windows-amd64.exe" -OutFile archytan-mcp-gate.exe
-(Get-FileHash archytan-mcp-gate.exe).Hash   # compare with the windows-amd64 line of $base/SHA256SUMS
+Invoke-WebRequest "$base/archytan-mcp-gate-windows-amd64.exe" -OutFile archytan-mcp-gate.exe -UseBasicParsing
+Invoke-WebRequest "$base/SHA256SUMS" -OutFile SHA256SUMS -UseBasicParsing
+$expected = ((Select-String windows-amd64 SHA256SUMS).Line -split '\s+')[0]
+if ((Get-FileHash archytan-mcp-gate.exe).Hash -eq $expected) { 'OK' } else { 'MISMATCH: do not run it' }
 ```
 
 The checksum file is signed by the release workflow, so you can also check
