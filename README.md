@@ -160,6 +160,150 @@ present; it cannot show receipts deleted from the end. Record the latest
 `chain_hash` (it is in every receipt) somewhere off the gate's disk now and
 then, so a truncated tail shows up as a gap.
 
+## Gate an agent's MCP tools
+
+`archytan-mcp-gate` sits between an agent host (Claude Desktop, Claude
+Code, an IDE agent) and an MCP tool server. The host launches the MCP gate
+in place of the server, and the MCP gate launches the server itself, so it
+becomes the only path to the tools. For every tool call it asks the gate,
+verifies the signed answer, spends the single-use capability, and only then
+forwards the call. Tools you have not mapped are hidden from the agent and
+refused.
+
+### 1. Download it
+
+Pick your platform: `darwin-arm64`, `darwin-amd64`, `linux-amd64`,
+`linux-arm64`, `windows-amd64.exe` or `windows-arm64.exe`.
+
+```sh
+base=https://github.com/High-ArchyTech-Solutions/archytan-lite-community/releases/latest/download
+curl -fsSLO "$base/archytan-mcp-gate-darwin-arm64"
+curl -fsSLO "$base/SHA256SUMS"
+grep darwin-arm64 SHA256SUMS | shasum -a 256 -c   # on Linux: sha256sum -c
+mv archytan-mcp-gate-darwin-arm64 archytan-mcp-gate && chmod +x archytan-mcp-gate
+```
+
+In Windows PowerShell:
+
+```powershell
+$base = 'https://github.com/High-ArchyTech-Solutions/archytan-lite-community/releases/latest/download'
+Invoke-WebRequest "$base/archytan-mcp-gate-windows-amd64.exe" -OutFile archytan-mcp-gate.exe
+(Get-FileHash archytan-mcp-gate.exe).Hash   # compare with the windows-amd64 line of $base/SHA256SUMS
+```
+
+The checksum file is signed by the release workflow, so you can also check
+that the binaries came from it:
+
+```sh
+curl -fsSLO "$base/SHA256SUMS.cosign.bundle"
+cosign verify-blob SHA256SUMS --bundle SHA256SUMS.cosign.bundle \
+  --certificate-identity-regexp '^https://github.com/High-ArchyTech-Solutions/archytan-lite/\.github/workflows/mcp-gate-binaries\.yml@refs/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+A macOS binary downloaded through a browser, rather than curl, is
+quarantined until you run `xattr -d com.apple.quarantine archytan-mcp-gate`.
+
+### 2. Run a gate the agent cannot talk its way past
+
+The MCP gate needs single-use capabilities on and a credential for the
+agent, so the agent's role comes from its credential. This policy lets an
+agent read and list files and keeps writing for an `editor`:
+
+```json
+{
+  "version": 1,
+  "actions": [
+    { "action": "file.read",  "allowed_roles": ["files_agent", "editor"] },
+    { "action": "file.list",  "allowed_roles": ["files_agent", "editor"] },
+    { "action": "file.write", "allowed_roles": ["editor"] }
+  ]
+}
+```
+
+Save it as `config/policy.json`, create the agent's credential with
+`callergen -caller-id claude-files -role files_agent` (see
+[Bind roles to credentials](#bind-roles-to-credentials-before-an-agent-calls-the-gate)),
+put its record in `config/callers.json`, and save the token alone in a
+file only you can read, such as `~/.archytan/claude-files.token`. Then
+generate the gate's signing key, keeping the public key it prints for step
+4, and start the gate:
+
+```sh
+docker volume create archytan-lite
+docker run --rm -v archytan-lite:/data --entrypoint keygen \
+  ghcr.io/high-archytech-solutions/archytan-lite:2.2.1 -out /data/signing_key.pem
+docker run -d --name archytan-lite -p 127.0.0.1:8421:8421 \
+  -v archytan-lite:/data -v "$PWD/config:/etc/archytan-lite:ro" \
+  -e ARCHYTAN_LITE_CALLERS_PATH=/etc/archytan-lite/callers.json \
+  -e ARCHYTAN_LITE_POLICY_PATH=/etc/archytan-lite/policy.json \
+  -e ARCHYTAN_LITE_DB_PATH=/data/archytan.db \
+  -e ARCHYTAN_LITE_SIGNING_KEY_PATH=/data/signing_key.pem \
+  -e ARCHYTAN_LITE_INSTANCE_URN=urn:archytan-lite:instance:agents \
+  -e ARCHYTAN_LITE_CAPABILITIES=on \
+  ghcr.io/high-archytech-solutions/archytan-lite:2.2.1
+```
+
+### 3. Map the tools you want the agent to have
+
+`mcp-gate.json` maps each tool to a policy action and names the argument
+that identifies the resource. Every other tool the server offers stays
+hidden:
+
+```json
+{
+  "version": 1,
+  "agent_uid": "claude-files",
+  "tools": {
+    "read_text_file": { "action": "file.read",  "resource_type": "file",      "resource_id_arg": "path" },
+    "list_directory": { "action": "file.list",  "resource_type": "directory", "resource_id_arg": "path" },
+    "write_file":     { "action": "file.write", "resource_type": "file",      "resource_id_arg": "path" }
+  }
+}
+```
+
+### 4. Point the host at the MCP gate
+
+The same entry works in a Claude Code project's `.mcp.json` and in Claude
+Desktop's `claude_desktop_config.json`. Here it wraps the reference
+filesystem server:
+
+```json
+{
+  "mcpServers": {
+    "files": {
+      "command": "/path/to/archytan-mcp-gate",
+      "args": ["--config", "/path/to/mcp-gate.json", "--",
+               "npx", "-y", "@modelcontextprotocol/server-filesystem", "/path/to/files"],
+      "env": {
+        "ARCHYTAN_MCP_GATE_URL": "http://127.0.0.1:8421",
+        "ARCHYTAN_MCP_GATE_CALLER_TOKEN_PATH": "/path/to/claude-files.token",
+        "ARCHYTAN_MCP_GATE_PUBLIC_KEY_HEX": "<the public key keygen printed>"
+      }
+    }
+  }
+}
+```
+
+Plain `http` is accepted only to a gate on the same machine, because every
+request carries the agent's credential.
+
+### What the agent sees
+
+With the setup above, the filesystem server offers 14 tools and the agent
+is shown 3. Reading a file and listing the folder go through, each with a
+signed ALLOW and a spent capability. A `write_file` call comes back to the
+agent as a tool error it can read, `Refused by Archytan Lite: the gate did
+not allow this action`, and the file is untouched. A call to an unmapped
+tool such as `move_file` is refused before it reaches the gate. All three
+decisions, the refusal included, are in the signed log that
+`--verify-chain` checks.
+
+The MCP gate protects what the agent reaches through it. Make it the only
+path: list the server only through the MCP gate's entry, and give the
+server's own credentials to that entry alone. An agent with a
+general-purpose shell can still start the server by hand.
+
 ## Configuration
 
 Set by environment variable. A missing required one stops the gate at
