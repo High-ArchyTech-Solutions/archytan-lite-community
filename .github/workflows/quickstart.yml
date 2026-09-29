@@ -1,13 +1,17 @@
 # Runs the quickstart exactly as the README tells people to, against the
-# published image, on every change and once a week. The weekly run catches
-# what a change here never would: a registry or image problem that breaks
-# the first thing a new developer tries.
+# published image, whenever the README or the scripts change and once a
+# week. The weekly run catches what a change here never would: a registry or
+# image problem that breaks the first thing a new developer tries. Each run
+# pulls the image once, so it runs only when something it tests changed:
+# the adoption numbers count image pulls.
 name: Quickstart
 
 on:
   push:
     branches: [main]
+    paths: ["README.md", "quickstart/**", ".github/workflows/quickstart.yml"]
   pull_request:
+    paths: ["README.md", "quickstart/**", ".github/workflows/quickstart.yml"]
   schedule:
     - cron: "17 6 * * 1"
   workflow_dispatch:

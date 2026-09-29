@@ -1,0 +1,43 @@
+# Records Archytan Lite's public adoption numbers once a day in
+# adoption.csv on the `metrics` branch: image pulls, npm and PyPI downloads,
+# and this repository's stars, watchers, forks, issues and traffic. The
+# branch keeps these daily commits off main, where a push would rerun the
+# quickstart and pull the image, inflating the very count being recorded.
+name: Adoption metrics
+
+on:
+  schedule:
+    - cron: "23 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency: adoption-metrics
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          ref: metrics
+          path: metrics
+
+      - name: Collect
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: python .github/scripts/adoption_metrics.py metrics/adoption.csv
+
+      - name: Commit to the metrics branch
+        working-directory: metrics
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add adoption.csv
+          if git diff --cached --quiet; then echo "No change."; exit 0; fi
+          git commit -m "Adoption numbers through $(tail -n 1 adoption.csv | cut -d, -f1)"
+          git push origin HEAD:metrics

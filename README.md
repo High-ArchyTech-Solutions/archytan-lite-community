@@ -204,6 +204,10 @@ Images up to 2.2.0 keep their signature in the image's own package: leave
   [Releases](https://github.com/High-ArchyTech-Solutions/archytan-lite-community/releases).
 - **Questions and bugs:** [open an issue](https://github.com/High-ArchyTech-Solutions/archytan-lite-community/issues/new/choose).
 - **Vulnerabilities:** report them privately, as [SECURITY.md](SECURITY.md) describes.
+- **Adoption numbers:** image pulls, npm and PyPI downloads, and this
+  repository's stars and traffic, recorded daily in
+  [adoption.csv](https://github.com/High-ArchyTech-Solutions/archytan-lite-community/blob/metrics/adoption.csv)
+  on the `metrics` branch.
 
 ## License
 
