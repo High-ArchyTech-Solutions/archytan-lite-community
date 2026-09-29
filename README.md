@@ -18,7 +18,8 @@ Product overview: [high-archy.tech/lite](https://high-archy.tech/lite).
 
 ## Quickstart
 
-Needs Docker and curl, and takes about a minute:
+Needs Docker and curl. It takes a few seconds once the image is
+downloaded; the first run adds the image pull:
 
 ```sh
 curl -fsSLO https://raw.githubusercontent.com/High-ArchyTech-Solutions/archytan-lite-community/main/quickstart/quickstart.sh
