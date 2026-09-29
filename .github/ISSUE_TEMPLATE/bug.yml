@@ -1,0 +1,35 @@
+name: Bug report
+description: The gate or a client did something other than what the docs say.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Security problems go through SECURITY.md, not a public issue.
+        Leave out real tokens and signing keys.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The image tag you pulled, and the client version if one is involved.
+      placeholder: ghcr.io/high-archytech-solutions/archytan-lite:2.2.1, archytan-lite 2.0.3 (PyPI)
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: The request you sent and the answer you got, or the log lines.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: setup
+    attributes:
+      label: Setup
+      description: How you run the gate (the docker run or compose lines, env vars with secrets removed) and your policy, if it matters.

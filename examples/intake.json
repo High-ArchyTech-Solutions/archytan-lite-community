@@ -1,0 +1,12 @@
+{
+  "$schema": "https://high-archy.tech/schemas/onboard-intake.v1.json",
+  "version": 1,
+  "actions": [
+    { "action": "device.remote_unlock", "allowed_roles": ["owner", "support_agent"] },
+    { "action": "device.factory_reset", "allowed_roles": ["owner"], "max_per_window": 3, "window_seconds": 3600 }
+  ],
+  "callers": [
+    { "caller_id": "agent-support-1",   "role": "support_agent" },
+    { "caller_id": "backend-owner-svc", "role": "owner" }
+  ]
+}

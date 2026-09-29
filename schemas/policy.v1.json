@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://high-archy.tech/schemas/policy.v1.json",
+  "title": "Archytan Lite policy.json",
+  "description": "Answers exactly one question per action: which roles may perform it, at all. An action absent from this file is always BLOCK for every role -- there is no ambient-allow path. See internal/policy/registry.go and the README's Quickstart.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "actions"],
+  "properties": {
+    "version": {
+      "const": 1,
+      "description": "Format version. Only 1 exists today."
+    },
+    "actions": {
+      "type": "array",
+      "description": "Every gated action. An action name not listed here can never be ALLOWed.",
+      "items": { "$ref": "#/$defs/rule" }
+    }
+  },
+  "$defs": {
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "allowed_roles"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The gated action's name, e.g. \"device.factory_reset\". Whatever your backend sends as the authorize request's \"action\" field -- must match exactly, with no leading or trailing whitespace."
+        },
+        "allowed_roles": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Roles permitted to perform this action. An empty list is rejected outright -- omit the action from the file instead, since that already means BLOCK for everyone."
+        },
+        "assertions": { "$ref": "#/$defs/assertions" }
+      }
+    },
+    "assertions": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional limits checked in addition to allowed_roles, never instead of it. Omit entirely rather than including one that asserts nothing.",
+      "properties": {
+        "max_per_window": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "Ceiling on successful uses of this action by one caller inside window_seconds. Required together with window_seconds -- a count without a duration does not describe a rate."
+        },
+        "window_seconds": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "The window max_per_window counts within, in seconds. Required together with max_per_window."
+        },
+        "tenant_match": {
+          "type": "boolean",
+          "description": "Require the caller's credential-bound tenant (from callers.json) to equal the request's resource.tenant_id. Only meaningful with ARCHYTAN_LITE_CALLERS_PATH set and every registered caller carrying a tenant -- see the README's \"Reloading policy.json\" and callers.schema.json."
+        }
+      }
+    }
+  }
+}

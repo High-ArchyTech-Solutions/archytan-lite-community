@@ -1,0 +1,215 @@
+# Archytan Lite
+
+[![Quickstart](https://github.com/High-ArchyTech-Solutions/archytan-lite-community/actions/workflows/quickstart.yml/badge.svg)](https://github.com/High-ArchyTech-Solutions/archytan-lite-community/actions/workflows/quickstart.yml)
+
+A fail-closed authorization gate for AI agents and the backends they act
+through. Your code asks the gate before a sensitive action: deleting a
+tenant, refunding a customer, unlocking a device. The gate answers with an
+Ed25519-signed, hash-chained receipt, and an ALLOW carries a single-use
+capability the actuator has to redeem before it acts. One binary and one
+SQLite file, running on your own infrastructure, with no telemetry.
+
+This repository is Lite's public home: the quickstart, examples, JSON
+Schemas, release notes and issue tracker. The gate is free to run under
+the Community license, and the
+[Node](https://www.npmjs.com/package/@high-archytech-solutions/archytan-lite)
+and [Python](https://pypi.org/project/archytan-lite/) clients are MIT.
+Product overview: [high-archy.tech/lite](https://high-archy.tech/lite).
+
+## Quickstart
+
+Needs Docker and curl, and takes about a minute:
+
+```sh
+curl -fsSLO https://raw.githubusercontent.com/High-ArchyTech-Solutions/archytan-lite-community/main/quickstart/quickstart.sh
+bash quickstart.sh
+```
+
+In Windows PowerShell:
+
+```powershell
+Invoke-WebRequest https://raw.githubusercontent.com/High-ArchyTech-Solutions/archytan-lite-community/main/quickstart/quickstart.ps1 -OutFile quickstart.ps1
+powershell -ExecutionPolicy Bypass -File quickstart.ps1
+```
+
+The script:
+
+1. creates a Docker volume for the signing key and the decision log;
+2. generates the gate's signing key, whose public half verifies every receipt;
+3. starts the gate on 127.0.0.1:8421 with the
+   [example policy](examples/policy.json) and single-use capabilities on;
+4. asks, as an `admin`, to delete business `biz_42`: **ALLOW**, with a
+   signed receipt and a capability;
+5. asks for the same thing as an `owner`: **BLOCK**, since the policy allows
+   only admins, and the refusal is logged too;
+6. redeems the capability twice: the first redeem succeeds and the second
+   is refused;
+7. verifies the decision log with `--verify-chain`: every receipt signed,
+   none edited, reordered or removed.
+
+It checks each answer as it arrives and stops at the first one that
+differs. This repository runs both scripts against the published image on
+every change and once a week; the badge above shows the latest run.
+
+The core of it, if you'd rather type the commands yourself:
+
+```sh
+docker volume create archytan-quickstart
+docker run --rm -v archytan-quickstart:/data --entrypoint keygen \
+  ghcr.io/high-archytech-solutions/archytan-lite:2.2.1 -out /data/signing_key.pem
+docker run -d --name archytan-quickstart -p 127.0.0.1:8421:8421 -v archytan-quickstart:/data \
+  -e ARCHYTAN_LITE_CALLER_TOKEN=quickstart-token \
+  -e ARCHYTAN_LITE_DB_PATH=/data/archytan.db \
+  -e ARCHYTAN_LITE_SIGNING_KEY_PATH=/data/signing_key.pem \
+  -e ARCHYTAN_LITE_POLICY_PATH=/usr/local/share/archytan-lite/examples/policy.json \
+  -e ARCHYTAN_LITE_INSTANCE_URN=urn:archytan-lite:instance:quickstart \
+  -e ARCHYTAN_LITE_CAPABILITIES=on \
+  ghcr.io/high-archytech-solutions/archytan-lite:2.2.1
+
+curl -s http://127.0.0.1:8421/v1/authorize \
+  -H "Authorization: Bearer quickstart-token" -H "Content-Type: application/json" \
+  -d '{"action":"business.delete","actor":{"uid":"u1","role":"admin"},"resource":{"type":"business","id":"biz_42"},"idempotency_key":"try-1"}'
+```
+
+Clean up with `docker rm -f archytan-quickstart && docker volume rm archytan-quickstart`.
+
+## Make it yours
+
+### Your own policy
+
+`policy.json` names the actions you gate and the roles allowed to perform
+each one. Start from [examples/policy.json](examples/policy.json); editors
+that read `$schema` autocomplete and validate it from
+[schemas/](schemas). Keep it in a folder and mount the folder read-only, so
+an editor that saves by replacing the file is still seen by the gate:
+
+```sh
+  -v "$PWD/config:/etc/archytan-lite:ro" \
+  -e ARCHYTAN_LITE_POLICY_PATH=/etc/archytan-lite/policy.json \
+```
+
+Policy changes apply live. Edit the file and send the gate a SIGHUP:
+
+```sh
+docker kill -s HUP archytan-quickstart
+```
+
+The gate validates the new file before swapping it in. A file that fails
+validation is refused and logged, and the previous policy keeps serving.
+
+### Bind roles to credentials before an agent calls the gate
+
+The quickstart uses one shared token, so the gate takes the role from the
+request body. That suits trusted backend code, which derives the role from
+a session it already authenticated. It is unsafe for an AI agent, which
+could simply claim `admin`. Give each caller its own credential instead:
+
+```sh
+docker run --rm --entrypoint callergen ghcr.io/high-archytech-solutions/archytan-lite:2.2.1 \
+  -caller-id agent-invoices -role support_agent
+```
+
+It prints a token, shown once, for that caller alone, and a record for the
+`callers` array of a callers file ([template](examples/callers.json)). Put
+the file next to your policy and use `ARCHYTAN_LITE_CALLERS_PATH` in place
+of `ARCHYTAN_LITE_CALLER_TOKEN`:
+
+```sh
+  -e ARCHYTAN_LITE_CALLERS_PATH=/etc/archytan-lite/callers.json \
+```
+
+Now each caller's role comes from its credential. An agent holding the
+`support_agent` token that claims `admin` is refused, and the gate logs it:
+
+```
+WARN authorize: role escalation attempt refused trace_id=trc_… caller_id=agent-invoices credential_role=support_agent claimed_role=admin action=business.delete
+```
+
+Two tools in the image check a policy and callers file before you roll
+them out: `policylint` finds what neither file shows on its own (a role
+nobody holds, a caller whose role permits nothing), and `policytest` runs
+ALLOW and BLOCK scenarios you write against the gate's own decision logic.
+Both exit nonzero on a finding, so either can gate a CI pipeline:
+
+```sh
+docker run --rm -v "$PWD/config:/etc/archytan-lite:ro" --entrypoint policylint \
+  ghcr.io/high-archytech-solutions/archytan-lite:2.2.1 \
+  -policy /etc/archytan-lite/policy.json -callers /etc/archytan-lite/callers.json
+```
+
+### Call it from your code
+
+```sh
+npm install @high-archytech-solutions/archytan-lite
+pip install archytan-lite
+```
+
+The clients treat anything other than a verified ALLOW that matches the
+request as a denial: a timeout, a refused connection, a bad signature, a
+receipt for some other action. Their READMEs on
+[npm](https://www.npmjs.com/package/@high-archytech-solutions/archytan-lite)
+and [PyPI](https://pypi.org/project/archytan-lite/) show the calls.
+
+### Keep the log honest
+
+`--verify-chain` checks every receipt's signature and the hash chain
+linking it to the one before, and names the exact receipt where anything
+stops matching. The chain proves nothing was altered among the receipts
+present; it cannot show receipts deleted from the end. Record the latest
+`chain_hash` (it is in every receipt) somewhere off the gate's disk now and
+then, so a truncated tail shows up as a gap.
+
+## Configuration
+
+Set by environment variable. A missing required one stops the gate at
+startup rather than falling back to a default.
+
+| Variable | Purpose |
+|---|---|
+| `ARCHYTAN_LITE_DB_PATH` | Required. The SQLite file for receipts and idempotency locks. |
+| `ARCHYTAN_LITE_SIGNING_KEY_PATH` | Required. The Ed25519 signing key that `keygen` wrote. |
+| `ARCHYTAN_LITE_POLICY_PATH` | Required. Your `policy.json`. |
+| `ARCHYTAN_LITE_INSTANCE_URN` | Required. Stamped into every receipt as `operator_urn`. |
+| `ARCHYTAN_LITE_CALLERS_PATH` | One of these two. The callers file binding each credential to one role. Recommended. |
+| `ARCHYTAN_LITE_CALLER_TOKEN` | One of these two. A single shared token; the role then comes from the request body, unverified. |
+| `ARCHYTAN_LITE_ADDR` | Listen address. Default `:8421`. |
+| `ARCHYTAN_LITE_CAPABILITIES` | `on` to attach a single-use capability to every ALLOW. Default `off`. |
+| `ARCHYTAN_LITE_CAPABILITY_TTL` | How long a capability stays redeemable. Default `30s`. |
+| `ARCHYTAN_LITE_RATE_LIMIT_RPS`, `ARCHYTAN_LITE_RATE_LIMIT_BURST` | Per-client request limits before a `429`. Defaults `20` and `40`. |
+| `ARCHYTAN_LITE_TRUST_PROXY_HEADERS` | `true` only behind a reverse proxy that sets `X-Forwarded-For` itself. Default `false`. |
+| `ARCHYTAN_LITE_MODE` | `observe` logs a would-be BLOCK and allows it, for rolling out a new policy against real traffic. Also needs `ARCHYTAN_LITE_OBSERVE_MODE_CONFIRM` set to the exact phrase the startup error names. Default `enforce`. |
+| `ARCHYTAN_LITE_LICENSE_PATH` | A paid plan's license file. A missing or expired license never affects authorization. |
+| `ARCHYTAN_LITE_TRUSTED_PUBLIC_KEYS_HEX` | For `--verify-chain`: every public key that ever signed a receipt in this database, comma-separated. |
+
+## Verify the image you pulled
+
+Every release image is signed keyless by the release workflow, and the
+signature is logged in Sigstore's public transparency log:
+
+```sh
+COSIGN_REPOSITORY=ghcr.io/high-archytech-solutions/archytan-lite-signatures \
+cosign verify ghcr.io/high-archytech-solutions/archytan-lite:latest \
+  --certificate-identity-regexp '^https://github.com/High-ArchyTech-Solutions/archytan-lite/\.github/workflows/release\.yml@refs/tags/v' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+Images up to 2.2.0 keep their signature in the image's own package: leave
+`COSIGN_REPOSITORY` unset to verify those.
+
+## Releases, questions and security reports
+
+- **New versions and security fixes:** watch this repository and choose
+  *Custom → Releases* to be notified. Release notes live under
+  [Releases](https://github.com/High-ArchyTech-Solutions/archytan-lite-community/releases).
+- **Questions and bugs:** [open an issue](https://github.com/High-ArchyTech-Solutions/archytan-lite-community/issues/new/choose).
+- **Vulnerabilities:** report them privately, as [SECURITY.md](SECURITY.md) describes.
+
+## License
+
+The contents of this repository (documentation, examples, schemas and
+scripts) are MIT-licensed; see [LICENSE](LICENSE). The gate itself, its
+container images and binaries, is licensed under the
+[Archytan Lite license](ARCHYTAN-LITE-LICENSE.txt): free to run on any
+number of self-hosted instances for your own internal business purposes,
+with paid plans for support and more at
+[high-archy.tech/lite](https://high-archy.tech/lite#pricing).

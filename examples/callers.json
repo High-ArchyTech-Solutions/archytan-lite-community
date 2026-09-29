@@ -1,0 +1,11 @@
+{
+  "$schema": "https://high-archy.tech/schemas/callers.v1.json",
+  "version": 1,
+  "callers": [
+    {
+      "caller_id": "DO_NOT_DEPLOY_run_cmd_callergen_or_cmd_onboard_instead",
+      "role": "owner",
+      "token_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}

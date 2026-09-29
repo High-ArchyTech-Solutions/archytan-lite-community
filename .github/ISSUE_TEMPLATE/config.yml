@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a vulnerability privately
+    url: https://github.com/High-ArchyTech-Solutions/archytan-lite-community/security/advisories/new
+    about: Security problems go here, not in a public issue.
+  - name: Paid plans and support
+    url: https://high-archy.tech/lite#pricing
+    about: Standard, Business and Enterprise plans.

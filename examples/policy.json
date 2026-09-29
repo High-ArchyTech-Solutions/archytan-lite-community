@@ -1,0 +1,14 @@
+{
+  "$schema": "https://high-archy.tech/schemas/policy.v1.json",
+  "version": 1,
+  "actions": [
+    { "action": "business.delete",        "allowed_roles": ["admin"] },
+    { "action": "business.prompt_edit",   "allowed_roles": ["admin", "owner"] },
+    { "action": "auth.master_role_grant", "allowed_roles": ["admin"] },
+
+    { "action": "device.remote_unlock",     "allowed_roles": ["owner", "support_agent"] },
+    { "action": "device.add_user",          "allowed_roles": ["owner"] },
+    { "action": "device.factory_reset",     "allowed_roles": ["owner"] },
+    { "action": "device.rotate_credentials","allowed_roles": ["owner", "admin"] }
+  ]
+}

@@ -1,0 +1,225 @@
+About this file: this is the license for the Archytan Lite gate, meaning
+the software in the private archytan-lite source repository and the
+container images and binaries built from it (including
+ghcr.io/high-archytech-solutions/archytan-lite). Where the text below says
+"this repository", it means that source repository. It does not govern the
+contents of archytan-lite-community, which are MIT-licensed (see LICENSE).
+The agreement itself follows, unchanged.
+
+--------------------------------------------------------------------------------
+
+ARCHYTAN LITE — PROPRIETARY SOFTWARE LICENSE AGREEMENT
+
+Copyright (c) 2026 High ArchyTech Solutions. All rights reserved.
+
+================================================================================
+
+This Archytan Lite Proprietary Software License Agreement ("Agreement") is
+a legal agreement between you, either an individual or a single entity
+("Licensee"), and Luis Fernando Martinez Chavez, an individual residing in
+Yucatan, Mexico doing business as High ArchyTech Solutions ("Licensor"),
+governing your use of the Archytan Lite gate software: the code in this
+repository's cmd/ and internal/ directories, the compiled binaries and
+container images built from them, and accompanying documentation
+(collectively, the "Software").
+
+SCOPE. This Agreement does NOT govern the client libraries distributed
+from this repository's clients/ directory (currently clients/node and
+clients/python). Those are independent works distributed under the MIT
+License — see clients/node/LICENSE and clients/python/LICENSE
+respectively — precisely so that embedding them in Licensee's own
+application imposes no obligation under this Agreement. Where a file
+carries its own license header or an enclosing directory carries its own
+LICENSE file, that license governs that file; this Agreement governs
+everything else in this repository.
+
+BY DOWNLOADING, INSTALLING, RUNNING, OR OTHERWISE USING THE SOFTWARE, YOU
+ACCEPT THIS AGREEMENT. IF YOU DO NOT AGREE TO ITS TERMS, DO NOT DOWNLOAD,
+INSTALL, RUN, OR USE THE SOFTWARE.
+
+1. OWNERSHIP
+
+The Software is licensed, not sold. Licensor and its licensors retain all
+right, title, and interest in and to the Software, including all
+copyrights, patents, trade secrets, trademarks, and other intellectual
+property rights therein. This Agreement grants Licensee no rights to
+Licensor's trademarks, service marks, or trade names, including
+"Archytan," "Archytan Lite," "Archytan Strategos," or "High ArchyTech,"
+except as necessary to accurately describe that Licensee is a user of the
+Software.
+
+2. GRANT OF LICENSE
+
+2.1. Community Use. Subject to the terms of this Agreement, Licensor
+grants Licensee a non-exclusive, non-transferable, revocable, worldwide
+license to install and run the Software, without a paid subscription, for
+an unlimited number of self-hosted instances, solely for Licensee's own
+internal business purposes.
+
+2.2. Paid Plans. A paid subscription plan ("Plan"), evidenced by a signed
+license file issued by Licensor, may grant additional rights beyond
+Section 2.1 — including, without limitation, technical support, priority
+bug fixes, and rights to additional instances — as described in the Plan
+Licensee has purchased. The specific entitlements of each Plan are as
+published by Licensor from time to time, or as separately agreed in
+writing.
+
+2.3. Source-Available Use. Where Licensor makes the Software's source
+code available (including by publishing this repository, or a portion of
+it, in a manner Licensee can access), Licensee may view, compile, modify,
+and test that source code, and may run modified versions of the Software,
+solely for Licensee's own internal use permitted under Section 2.1 or
+2.2. This includes ordinary internal-deployment activity: patching a bug,
+adjusting a build or deployment script, or maintaining a private fork for
+Licensee's own operational needs. It does not include any use restricted
+by Section 3.
+
+2.4. No Guarantee From the License File Mechanism. The Software includes
+a mechanism for verifying an offline, cryptographically signed license
+file. Licensee acknowledges that, by design, a missing, expired, or
+invalid license file does NOT prevent the Software from operating — the
+Software is fail-closed with respect to authorization decisions, not with
+respect to licensing. This design choice does not alter, waive, or limit
+Licensee's obligation to hold a valid, paid Plan for any use that exceeds
+the Community Use grant in Section 2.1, or Licensee's payment obligations
+under a Plan Licensee has purchased. Continuing to operate the Software
+without a valid Plan where one is required is a material breach of this
+Agreement regardless of what the Software's own health checks report.
+
+3. RESTRICTIONS
+
+Sections 2.1 through 2.3 are the entire scope of what this Agreement
+permits. Notwithstanding those grants, Licensee shall not, and shall not
+permit any third party to:
+
+  (a) offer the Software, or any modified version of it, to any third
+      party as a hosted, managed, or "as-a-service" offering — including,
+      without limitation, embedding it in a platform, service, or product
+      that a third party accesses remotely rather than operating
+      themselves — where doing so would allow that third party to obtain,
+      in substance, the benefit of the Software's authorization-gate
+      functionality without Licensor being paid for it;
+
+  (b) sell, rent, lease, sublicense, or otherwise distribute the
+      Software, or any modified version of it, to any third party as a
+      standalone product, or as a competing authorization-gate or
+      policy-enforcement offering, whether or not for a fee; this does
+      not restrict Licensee from deploying the Software (unmodified or
+      modified under Section 2.3) inside Licensee's own products or
+      services as an internal component, provided the Software itself is
+      not what is being sold, resold, or offered to those products' or
+      services' own end users as a distinct, separately identifiable
+      authorization-gate product;
+
+  (c) reverse engineer, decompile, or disassemble a compiled binary or
+      container image form of the Software, except to the extent such
+      restriction is prohibited by applicable law notwithstanding this
+      limitation, and then only to the minimum extent required by such
+      law — this restriction does not apply to source code Licensee is
+      permitted to view under Section 2.3, which may be read and studied
+      freely;
+
+  (d) remove, obscure, or alter any proprietary notice, license header,
+      or trademark on or in the Software, or represent a modified version
+      of the Software as Licensor's official, unmodified release;
+
+  (e) develop, market, or sell a commercial third-party authorization,
+      policy-enforcement, or access-control product or service that
+      derives its implementation from the Software's source code — this
+      restriction does NOT extend to Licensee's ordinary internal
+      application security work (role checks, RBAC middleware, internal
+      policy engines, or similar) built independently of the Software's
+      source, whether or not it performs a conceptually similar function;
+      or
+
+  (f) use the Software in violation of applicable export control or
+      economic sanctions laws.
+
+4. THIRD-PARTY AND OPEN-SOURCE COMPONENTS
+
+The Software incorporates open-source components licensed under their own
+respective terms (see go.mod, package.json, and pyproject.toml for the
+current list of dependencies). Nothing in this Agreement limits rights
+Licensee already holds in such components under their own licenses; where
+this Agreement and a component's own license conflict as to that
+component specifically, the component's own license controls solely with
+respect to that component.
+
+5. CONFIDENTIALITY
+
+Where Licensor shares source code, technical support communications, or
+other non-public materials with Licensee outside of a repository this
+Agreement designates as source-available under Section 2.3, those
+materials are Licensor's confidential information. Licensee shall protect
+them using at least the same degree of care Licensee uses to protect its
+own confidential information of similar importance, and in no event less
+than reasonable care, and shall not disclose them to any third party
+except as this Agreement or Licensor separately permits in writing. This
+Section does not restrict Licensee's use of source code Licensor has made
+source-available under Section 2.3, which is governed by Sections 2.3 and
+3 instead.
+
+6. TERM AND TERMINATION
+
+This Agreement is effective until terminated. Licensor may terminate this
+Agreement immediately upon written notice if Licensee breaches any term
+of this Agreement and fails to cure such breach within thirty (30) days
+of notice (or immediately, without opportunity to cure, for a breach of
+Section 3). Upon termination, Licensee shall cease all use of the
+Software and destroy all copies in its possession or control. Sections 1,
+3, 5, 7, 8, and 9 survive termination.
+
+7. DISCLAIMER OF WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS," WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+LICENSOR DOES NOT WARRANT THAT THE SOFTWARE WILL BE ERROR-FREE OR THAT
+ITS USE WILL BE UNINTERRUPTED. LICENSEE IS SOLELY RESPONSIBLE FOR
+DETERMINING THE APPROPRIATENESS OF USING THE SOFTWARE AND ASSUMES ALL
+RISKS ASSOCIATED WITH ITS USE, INCLUDING WITHOUT LIMITATION RISKS RELATED
+TO THE SECURITY, ACCURACY, AND RELIABILITY OF THE SOFTWARE'S
+AUTHORIZATION DECISIONS.
+
+8. LIMITATION OF LIABILITY
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL
+LICENSOR BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL,
+OR PUNITIVE DAMAGES, OR ANY LOSS OF PROFITS, REVENUE, DATA, OR USE,
+ARISING OUT OF OR RELATED TO THIS AGREEMENT OR THE SOFTWARE, REGARDLESS
+OF THE THEORY OF LIABILITY, EVEN IF LICENSOR HAS BEEN ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGES. LICENSOR'S TOTAL AGGREGATE LIABILITY UNDER
+THIS AGREEMENT SHALL NOT EXCEED THE AMOUNT LICENSEE PAID LICENSOR FOR THE
+SOFTWARE IN THE TWELVE (12) MONTHS PRECEDING THE CLAIM, OR ONE HUNDRED
+UNITED STATES DOLLARS (US$100) IF LICENSEE HAS PAID NOTHING.
+
+9. GENERAL
+
+9.1. Governing Law and Venue. This Agreement is governed by the laws of
+Mexico and the State of Yucatan, without regard to conflict-of-laws
+principles. Any legal action arising under this Agreement shall be brought
+exclusively in the competent courts located in Merida, Yucatan, Mexico, and
+each party irrevocably submits to the jurisdiction of such courts.
+
+9.2. Entire Agreement. This Agreement, together with the terms of any
+Plan Licensee has purchased, constitutes the entire agreement between the
+parties regarding the Software and supersedes all prior or
+contemporaneous understandings regarding its subject matter.
+
+9.3. Severability. If any provision of this Agreement is held
+unenforceable, the remaining provisions remain in full force and effect.
+
+9.4. No Waiver. Licensor's failure to enforce any provision of this
+Agreement is not a waiver of its right to do so later.
+
+9.5. Assignment. Licensee may not assign this Agreement without
+Licensor's prior written consent. Licensor may assign this Agreement in
+connection with a merger, acquisition, or sale of substantially all of
+its assets.
+
+9.6. Contact. Questions about this Agreement, or requests for a
+commercial license beyond its terms, may be directed to
+licensing@high-archy.tech.
+
+================================================================================
+END OF LICENSE

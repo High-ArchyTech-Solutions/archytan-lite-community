@@ -1,0 +1,3 @@
+# Shell scripts run under bash, which stops at the carriage return that
+# core.autocrlf would add on a Windows checkout ("$'\r': command not found").
+*.sh text eol=lf
