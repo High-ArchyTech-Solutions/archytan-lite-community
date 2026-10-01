@@ -59,7 +59,7 @@ The core of it, if you'd rather type the commands yourself:
 ```sh
 docker volume create archytan-quickstart
 docker run --rm -v archytan-quickstart:/data --entrypoint keygen \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.3.0 -out /data/signing_key.pem
+  ghcr.io/high-archytech-solutions/archytan-lite:2.3.1 -out /data/signing_key.pem
 docker run -d --name archytan-quickstart -p 127.0.0.1:8421:8421 -v archytan-quickstart:/data \
   -e ARCHYTAN_LITE_CALLER_TOKEN=quickstart-token \
   -e ARCHYTAN_LITE_DB_PATH=/data/archytan.db \
@@ -67,7 +67,7 @@ docker run -d --name archytan-quickstart -p 127.0.0.1:8421:8421 -v archytan-quic
   -e ARCHYTAN_LITE_POLICY_PATH=/usr/local/share/archytan-lite/examples/policy.json \
   -e ARCHYTAN_LITE_INSTANCE_URN=urn:archytan-lite:instance:quickstart \
   -e ARCHYTAN_LITE_CAPABILITIES=on \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.3.0
+  ghcr.io/high-archytech-solutions/archytan-lite:2.3.1
 
 curl -s http://127.0.0.1:8421/v1/authorize \
   -H "Authorization: Bearer quickstart-token" -H "Content-Type: application/json" \
@@ -108,7 +108,7 @@ a session it already authenticated. It is unsafe for an AI agent, which
 could simply claim `admin`. Give each caller its own credential instead:
 
 ```sh
-docker run --rm --entrypoint callergen ghcr.io/high-archytech-solutions/archytan-lite:2.3.0 \
+docker run --rm --entrypoint callergen ghcr.io/high-archytech-solutions/archytan-lite:2.3.1 \
   -caller-id agent-invoices -role support_agent
 ```
 
@@ -136,7 +136,7 @@ Both exit nonzero on a finding, so either can gate a CI pipeline:
 
 ```sh
 docker run --rm -v "$PWD/config:/etc/archytan-lite:ro" --entrypoint policylint \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.3.0 \
+  ghcr.io/high-archytech-solutions/archytan-lite:2.3.1 \
   -policy /etc/archytan-lite/policy.json -callers /etc/archytan-lite/callers.json
 ```
 
@@ -236,7 +236,7 @@ generate the gate's signing key, keeping the public key it prints for step
 ```sh
 docker volume create archytan-lite
 docker run --rm -v archytan-lite:/data --entrypoint keygen \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.3.0 -out /data/signing_key.pem
+  ghcr.io/high-archytech-solutions/archytan-lite:2.3.1 -out /data/signing_key.pem
 docker run -d --name archytan-lite -p 127.0.0.1:8421:8421 \
   -v archytan-lite:/data -v "$PWD/config:/etc/archytan-lite:ro" \
   -e ARCHYTAN_LITE_CALLERS_PATH=/etc/archytan-lite/callers.json \
@@ -245,7 +245,7 @@ docker run -d --name archytan-lite -p 127.0.0.1:8421:8421 \
   -e ARCHYTAN_LITE_SIGNING_KEY_PATH=/data/signing_key.pem \
   -e ARCHYTAN_LITE_INSTANCE_URN=urn:archytan-lite:instance:agents \
   -e ARCHYTAN_LITE_CAPABILITIES=on \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.3.0
+  ghcr.io/high-archytech-solutions/archytan-lite:2.3.1
 ```
 
 ### 3. Map the tools you want the agent to have
@@ -302,6 +302,15 @@ not allow this action`, and the file is untouched. A call to an unmapped
 tool such as `move_file` is refused before it reaches the gate. All three
 decisions, the refusal included, are in the signed log that
 `--verify-chain` checks.
+
+The server only ever serves `/path/to/files`, the folder in its command.
+Claude Code tells MCP servers about its workspace through MCP roots, and
+the filesystem server would otherwise swap its folder for that workspace.
+Since 2.3.1 the MCP gate keeps roots away from the server, so a host
+cannot widen what the operator configured; download 2.3.1 or later if you
+use an earlier MCP gate. The policy decides which actions the agent may
+take, and each receipt records the path, but the policy does not match
+paths: the server's own arguments set its reach.
 
 The MCP gate protects what the agent reaches through it. Make it the only
 path: list the server only through the MCP gate's entry, and give the

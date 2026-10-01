@@ -9,7 +9,7 @@
 # arrives, so the script stops at the first one that differs from what the
 # comments say. Same steps as quickstart.sh.
 
-$Image = if ($env:IMAGE) { $env:IMAGE } else { 'ghcr.io/high-archytech-solutions/archytan-lite:2.3.0' }
+$Image = if ($env:IMAGE) { $env:IMAGE } else { 'ghcr.io/high-archytech-solutions/archytan-lite:2.3.1' }
 $Name = 'archytan-quickstart'
 $Gate = 'http://127.0.0.1:8421'
 $Headers = @{ Authorization = 'Bearer quickstart-token' }
