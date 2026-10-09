@@ -1,0 +1,96 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://high-archy.tech/schemas/receipt.v1.json",
+  "title": "Archytan Lite decision receipt",
+  "description": "One signed decision. The gate mints a receipt for every authorize request it decides, ALLOW or BLOCK, signs it with its Ed25519 key, and chains it to the receipt before it. An ALLOW receipt is returned in the /v1/authorize response under \"receipt\". A BLOCK receipt is recorded and exported but never returned to the caller, which receives only {\"decision\", \"trace_id\"}. A request rejected before a decision (bad credential, malformed or incomplete body) produces no receipt. Verify a receipt as received: never re-serialize it first. Schema validation checks shape only; integrity comes from verifying the signature and the chain (archytan-lite --verify-chain, or the standalone verifier in an --export-chain bundle). See internal/receipt/receipt.go.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "receipt_id",
+    "action",
+    "resource_type",
+    "resource_id",
+    "actor_uid",
+    "actor_role",
+    "decision",
+    "intent_hash",
+    "signature",
+    "operator_urn",
+    "trace_id",
+    "seq",
+    "chain_hash",
+    "timestamp"
+  ],
+  "properties": {
+    "receipt_id": {
+      "type": "string",
+      "pattern": "^rcpt_[0-9a-f]{32}$",
+      "description": "Unique receipt identifier: \"rcpt_\" followed by 16 random bytes in hex."
+    },
+    "action": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The action that was requested, as named in policy.json (e.g. \"invoice.read\")."
+    },
+    "resource_type": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The type of the resource the action targets, from the request."
+    },
+    "resource_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The identifier of the resource the action targets, from the request. Receipts carry resource identifiers as given and cannot be redacted without breaking verification."
+    },
+    "actor_uid": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The actor identifier the caller supplied in the request."
+    },
+    "actor_role": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The role the decision was made against. In bound mode (ARCHYTAN_LITE_CALLERS_PATH) this is the role bound to the caller's credential, never a role claimed in the request body. In shared-secret mode it is the role from the request body."
+    },
+    "decision": {
+      "type": "string",
+      "enum": ["ALLOW", "BLOCK"],
+      "description": "The decision. \"ESCALATE\" is reserved in the format but no current gate emits it."
+    },
+    "intent_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Hex SHA-256 of the decision's canonical fields, computed by the gate. The request's idempotency key is part of the hashed input but is never serialized, so a client verifies with the key it sent."
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{128}$",
+      "description": "Hex Ed25519 signature by the gate's signing key over the intent hash, under the receipt domain tag."
+    },
+    "operator_urn": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The identity of the gate instance that made the decision (ARCHYTAN_LITE_INSTANCE_URN)."
+    },
+    "trace_id": {
+      "type": "string",
+      "pattern": "^trc_[0-9a-f]{16}$",
+      "description": "Per-request trace identifier: \"trc_\" followed by 8 random bytes in hex. It is the same value a refused caller receives, so an operator can find the receipt and the server-side reason for a refusal from it."
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Position of this receipt in the gate's chain, starting at 1."
+    },
+    "chain_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Hex SHA-256 link from this receipt to the one before it. Removing, editing or reordering any receipt breaks the chain."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC 3339 UTC time the decision was minted."
+    }
+  }
+}

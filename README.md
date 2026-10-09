@@ -162,6 +162,24 @@ present; it cannot show receipts deleted from the end. Record the latest
 `chain_hash` (it is in every receipt) somewhere off the gate's disk now and
 then, so a truncated tail shows up as a gap.
 
+To hand the log to an auditor, `--export-chain <dir>` writes it into a new
+or empty folder: `receipts.json` with every receipt exactly as stored, a
+manifest signed with the gate's key, and the source of a standalone
+verifier, so the auditor can check the log without this binary and without
+access to the gate. It reads `ARCHYTAN_LITE_DB_PATH` and
+`ARCHYTAN_LITE_SIGNING_KEY_PATH`. Resource ids, actor ids, roles and
+idempotency keys are exported as recorded, because the signatures cover
+them, so treat an export as personal data.
+
+Both receipt formats have a JSON Schema:
+[schemas/receipt.v1.json](schemas/receipt.v1.json) for the receipt an ALLOW
+returns, and [schemas/receipts-export.v1.json](schemas/receipts-export.v1.json)
+for `receipts.json`. They differ on purpose: an exported receipt carries the
+idempotency key that recomputing its `intent_hash` needs, and its
+`created_at` text as stored, while the returned one carries `timestamp`
+instead. A schema checks shape only; a receipt is genuine when its
+signature and its chain verify.
+
 ## Gate an agent's MCP tools
 
 `archytan-mcp-gate` sits between an agent host (Claude Desktop, Claude
@@ -337,7 +355,7 @@ startup rather than falling back to a default.
 | `ARCHYTAN_LITE_TRUST_PROXY_HEADERS` | `true` only behind a reverse proxy that sets `X-Forwarded-For` itself. Default `false`. |
 | `ARCHYTAN_LITE_MODE` | `observe` logs a would-be BLOCK and allows it, for rolling out a new policy against real traffic. Also needs `ARCHYTAN_LITE_OBSERVE_MODE_CONFIRM` set to the exact phrase the startup error names. Default `enforce`. |
 | `ARCHYTAN_LITE_LICENSE_PATH` | A paid plan's license file. A missing or expired license never affects authorization. |
-| `ARCHYTAN_LITE_TRUSTED_PUBLIC_KEYS_HEX` | For `--verify-chain`: every public key that ever signed a receipt in this database, comma-separated. |
+| `ARCHYTAN_LITE_TRUSTED_PUBLIC_KEYS_HEX` | For `--verify-chain` and `--export-chain`: every public key that ever signed a receipt in this database, comma-separated. `--export-chain` adds the current key itself. |
 
 ## Verify the image you pulled
 
