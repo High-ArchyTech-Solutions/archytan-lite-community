@@ -12,7 +12,7 @@ body:
     attributes:
       label: Version
       description: The image tag you pulled, and the client version if one is involved.
-      placeholder: ghcr.io/high-archytech-solutions/archytan-lite:2.3.1, archytan-lite 2.0.3 (PyPI)
+      placeholder: ghcr.io/high-archytech-solutions/archytan-lite:2.3.2, archytan-lite 2.0.3 (PyPI)
     validations:
       required: true
   - type: textarea

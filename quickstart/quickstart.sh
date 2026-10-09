@@ -15,7 +15,7 @@
 set -euo pipefail
 export MSYS_NO_PATHCONV=1 # Git Bash on Windows: pass /data paths to Docker as written
 
-IMAGE="${IMAGE:-ghcr.io/high-archytech-solutions/archytan-lite:2.3.1}"
+IMAGE="${IMAGE:-ghcr.io/high-archytech-solutions/archytan-lite:2.3.2}"
 NAME=archytan-quickstart
 GATE=http://127.0.0.1:8421
 AUTH="Authorization: Bearer quickstart-token"
