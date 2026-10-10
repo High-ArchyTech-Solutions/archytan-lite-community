@@ -59,7 +59,7 @@ The core of it, if you'd rather type the commands yourself:
 ```sh
 docker volume create archytan-quickstart
 docker run --rm -v archytan-quickstart:/data --entrypoint keygen \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.3.2 -out /data/signing_key.pem
+  ghcr.io/high-archytech-solutions/archytan-lite:2.4.0 -out /data/signing_key.pem
 docker run -d --name archytan-quickstart -p 127.0.0.1:8421:8421 -v archytan-quickstart:/data \
   -e ARCHYTAN_LITE_CALLER_TOKEN=quickstart-token \
   -e ARCHYTAN_LITE_DB_PATH=/data/archytan.db \
@@ -67,7 +67,7 @@ docker run -d --name archytan-quickstart -p 127.0.0.1:8421:8421 -v archytan-quic
   -e ARCHYTAN_LITE_POLICY_PATH=/usr/local/share/archytan-lite/examples/policy.json \
   -e ARCHYTAN_LITE_INSTANCE_URN=urn:archytan-lite:instance:quickstart \
   -e ARCHYTAN_LITE_CAPABILITIES=on \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.3.2
+  ghcr.io/high-archytech-solutions/archytan-lite:2.4.0
 
 curl -s http://127.0.0.1:8421/v1/authorize \
   -H "Authorization: Bearer quickstart-token" -H "Content-Type: application/json" \
@@ -108,7 +108,7 @@ a session it already authenticated. It is unsafe for an AI agent, which
 could simply claim `admin`. Give each caller its own credential instead:
 
 ```sh
-docker run --rm --entrypoint callergen ghcr.io/high-archytech-solutions/archytan-lite:2.3.2 \
+docker run --rm --entrypoint callergen ghcr.io/high-archytech-solutions/archytan-lite:2.4.0 \
   -caller-id agent-invoices -role support_agent
 ```
 
@@ -136,7 +136,7 @@ Both exit nonzero on a finding, so either can gate a CI pipeline:
 
 ```sh
 docker run --rm -v "$PWD/config:/etc/archytan-lite:ro" --entrypoint policylint \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.3.2 \
+  ghcr.io/high-archytech-solutions/archytan-lite:2.4.0 \
   -policy /etc/archytan-lite/policy.json -callers /etc/archytan-lite/callers.json
 ```
 
@@ -153,32 +153,89 @@ receipt for some other action. Their READMEs on
 [npm](https://www.npmjs.com/package/@high-archytech-solutions/archytan-lite)
 and [PyPI](https://pypi.org/project/archytan-lite/) show the calls.
 
+Gates from 2.4 return version 2 receipts, which also sign the policy file,
+credential, tenant and mode each decision was made under. Clients from
+2.1.0 verify both versions and can deny an ALLOW made under a policy you
+didn't expect. A client before 2.1.0 can't verify a version 2 receipt and
+denies, so upgrade the clients before the gate, or keep the gate on version
+1 receipts with `ARCHYTAN_LITE_RECEIPT_VERSION=1` until they're upgraded.
+
+### Follow a decision into your traces
+
+Send your trace's W3C `traceparent` header with a request (both clients
+take a `traceparent` option) and every line the gate logs for it carries
+`otel_trace_id` and `otel_parent_id`, and a version 2 receipt signs the
+trace id. Point your log pipeline's trace id field at `otel_trace_id` and
+the gate's decision sits beside your agent's own spans. The gate only
+reads the header: it starts no spans and sends nothing anywhere, and a
+malformed header is ignored.
+
 ### Keep the log honest
 
 `--verify-chain` checks every receipt's signature and the hash chain
 linking it to the one before, and names the exact receipt where anything
 stops matching. The chain proves nothing was altered among the receipts
-present; it cannot show receipts deleted from the end. Record the latest
-`chain_hash` (it is in every receipt) somewhere off the gate's disk now and
-then, so a truncated tail shows up as a gap.
+present; it can't show receipts deleted from the end. Record the latest
+`chain_hash` (it's in every receipt) somewhere off the gate's disk now and
+then, so a truncated tail shows up as a gap, or turn on checkpoints (below),
+which do that on a schedule with a key the gate host can't copy.
 
 To hand the log to an auditor, `--export-chain <dir>` writes it into a new
-or empty folder: `receipts.json` with every receipt exactly as stored, a
-manifest signed with the gate's key, and the source of a standalone
-verifier, so the auditor can check the log without this binary and without
-access to the gate. It reads `ARCHYTAN_LITE_DB_PATH` and
+or empty folder: `receipts.json` with every receipt exactly as stored,
+`checkpoints.json`, a manifest signed with the gate's key, and the source of
+a standalone verifier, so the auditor can check the log without this binary
+and without access to the gate. It reads `ARCHYTAN_LITE_DB_PATH` and
 `ARCHYTAN_LITE_SIGNING_KEY_PATH`. Resource ids, actor ids, roles and
 idempotency keys are exported as recorded, because the signatures cover
 them, so treat an export as personal data.
 
-Both receipt formats have a JSON Schema:
-[schemas/receipt.v1.json](schemas/receipt.v1.json) for the receipt an ALLOW
-returns, and [schemas/receipts-export.v1.json](schemas/receipts-export.v1.json)
-for `receipts.json`. They differ on purpose: an exported receipt carries the
-idempotency key that recomputing its `intent_hash` needs, and its
-`created_at` text as stored, while the returned one carries `timestamp`
-instead. A schema checks shape only; a receipt is genuine when its
-signature and its chain verify.
+The receipt formats have JSON Schemas.
+[schemas/receipt.v2.json](schemas/receipt.v2.json) is the receipt an ALLOW
+returns from a 2.4 gate, and
+[schemas/receipts-export.v2.json](schemas/receipts-export.v2.json) is the
+`receipts.json` 2.4 writes, version 1 and version 2 rows alike.
+[schemas/receipt.v1.json](schemas/receipt.v1.json) covers earlier gates and
+a 2.4 gate set to `ARCHYTAN_LITE_RECEIPT_VERSION=1`, and
+[schemas/receipts-export.v1.json](schemas/receipts-export.v1.json) the
+exports earlier releases wrote. An exported receipt carries the idempotency
+key that recomputing its `intent_hash` needs, which a returned one never
+does. A schema checks shape only; a receipt is genuine when its signature
+and its chain verify.
+
+### Checkpoints
+
+Every receipt is signed with the gate's own key, a file on the gate host.
+Checkpoints add a key that can't leave a KMS or HSM. Every 1000 receipts or
+5 minutes, whichever comes first and only when there are new receipts, the
+gate has a signer command you configure sign the chain's latest
+`chain_hash`, checks the signature, stores the checkpoint and logs it as
+one line. Ship that log off the host: a rewrite of the receipts behind any
+checkpoint then contradicts a copy the gate host can't take back, and a
+fresh checkpoint over a rewritten log takes live use of the KMS key, which
+the KMS's own audit log records.
+
+```sh
+  -e ARCHYTAN_LITE_CHECKPOINT_SIGNER='["/usr/local/bin/vault-transit.sh"]' \
+  -e ARCHYTAN_LITE_CHECKPOINT_PUBLIC_KEY_PATH=/etc/archytan-lite/checkpoint.pub.pem \
+  -e ARCHYTAN_LITE_CHECKPOINT_ALGORITHM=ecdsa-p256-sha256 \
+```
+
+The signer reads the message on stdin and prints the signature in base64.
+The gate runs it directly, with no shell, kills it along with everything it
+started if it runs too long, and checks its signature before storing
+anything. [checkpoints/](checkpoints/) has signer scripts for HashiCorp
+Vault Transit, tested against a Vault dev server with a sign-only token,
+and for AWS KMS, Google Cloud KMS, Azure Key Vault and PKCS #11 HSMs,
+written from each provider's documentation and not yet tested. The
+published image has no shell or cloud CLI, so build an image from it that
+adds what your signer needs.
+
+If the signer can't sign when the gate starts, the gate doesn't start. Once
+it's running, a failing signer never holds up a decision: `/v1/healthz`
+keeps answering 200 and reports `"checkpoints": {"status": "degraded"}` for
+your monitoring to alert on. `--verify-chain` checks checkpoints with only
+the public key, and the auditor's verifier takes `--checkpoint-keys` and,
+for the lines your log pipeline kept, `--checkpoints <gate log>`.
 
 ## Gate an agent's MCP tools
 
@@ -254,7 +311,7 @@ generate the gate's signing key, keeping the public key it prints for step
 ```sh
 docker volume create archytan-lite
 docker run --rm -v archytan-lite:/data --entrypoint keygen \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.3.2 -out /data/signing_key.pem
+  ghcr.io/high-archytech-solutions/archytan-lite:2.4.0 -out /data/signing_key.pem
 docker run -d --name archytan-lite -p 127.0.0.1:8421:8421 \
   -v archytan-lite:/data -v "$PWD/config:/etc/archytan-lite:ro" \
   -e ARCHYTAN_LITE_CALLERS_PATH=/etc/archytan-lite/callers.json \
@@ -263,7 +320,7 @@ docker run -d --name archytan-lite -p 127.0.0.1:8421:8421 \
   -e ARCHYTAN_LITE_SIGNING_KEY_PATH=/data/signing_key.pem \
   -e ARCHYTAN_LITE_INSTANCE_URN=urn:archytan-lite:instance:agents \
   -e ARCHYTAN_LITE_CAPABILITIES=on \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.3.2
+  ghcr.io/high-archytech-solutions/archytan-lite:2.4.0
 ```
 
 ### 3. Map the tools you want the agent to have
@@ -355,7 +412,11 @@ startup rather than falling back to a default.
 | `ARCHYTAN_LITE_TRUST_PROXY_HEADERS` | `true` only behind a reverse proxy that sets `X-Forwarded-For` itself. Default `false`. |
 | `ARCHYTAN_LITE_MODE` | `observe` logs a would-be BLOCK and allows it, for rolling out a new policy against real traffic. Also needs `ARCHYTAN_LITE_OBSERVE_MODE_CONFIRM` set to the exact phrase the startup error names. Default `enforce`. |
 | `ARCHYTAN_LITE_LICENSE_PATH` | A paid plan's license file. A missing or expired license never affects authorization. |
+| `ARCHYTAN_LITE_RECEIPT_VERSION` | `1` keeps minting version 1 receipts while clients older than 2.1.0 are upgraded. Default `2`. |
+| `ARCHYTAN_LITE_CHECKPOINT_SIGNER`, `ARCHYTAN_LITE_CHECKPOINT_PUBLIC_KEY_PATH`, `ARCHYTAN_LITE_CHECKPOINT_ALGORITHM` | Turn on checkpoints, all three together: the signer command as a JSON array, the checkpoint key's public half as a PEM file, and its algorithm (`ed25519`, `ecdsa-p256-sha256`, `ecdsa-p384-sha384`, `rsa-pss-sha256` or `rsa-pkcs1v15-sha256`). Setting only some stops the gate at startup. |
+| `ARCHYTAN_LITE_CHECKPOINT_EVERY`, `ARCHYTAN_LITE_CHECKPOINT_INTERVAL`, `ARCHYTAN_LITE_CHECKPOINT_TIMEOUT` | When to make a checkpoint and how long a signer may run. Defaults `1000` receipts, `5m` and `30s`. |
 | `ARCHYTAN_LITE_TRUSTED_PUBLIC_KEYS_HEX` | For `--verify-chain` and `--export-chain`: every public key that ever signed a receipt in this database, comma-separated. `--export-chain` adds the current key itself. |
+| `ARCHYTAN_LITE_CHECKPOINT_RETIRED_PUBLIC_KEY_PATHS` | For `--verify-chain` and `--export-chain`: earlier checkpoint public keys, separated like `PATH`. |
 
 ## Verify the image you pulled
 

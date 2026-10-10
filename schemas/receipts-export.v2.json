@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://high-archy.tech/schemas/receipts-export.v2.json",
+  "title": "Archytan Lite receipt export, version 2 layout",
+  "description": "The receipts.json file written by archytan-lite --export-chain since Archytan Lite 2.4. Each entry is a receipt as stored, version 1 or 2: a log written across an upgrade holds both, and each row's receipt_version says which rules verify it. A version 1 row has empty v2 fields (and observe_override false); a version 2 row has a policy_sha256, a caller_id and a mode. Unlike the receipt /v1/authorize returns, each row includes idempotency_key, which the signed intent covers and an offline verifier needs. The export directory also holds manifest.json, its signature manifest.sig, a README and the source of a standalone verifier that checks signatures and the chain; this schema checks the file's shape only. See internal/receipt/store.go (StoredReceipt).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "receipts"],
+  "properties": {
+    "format": {
+      "const": "archytan-lite-receipts-v2",
+      "description": "Format identifier. The earlier layout, without receipt_version or v2 fields, is archytan-lite-receipts-v1 (see receipts-export.v1.json)."
+    },
+    "receipts": {
+      "type": "array",
+      "description": "Every receipt in the gate's chain, in sequence order, ALLOW and BLOCK alike.",
+      "items": { "$ref": "#/definitions/storedReceipt" }
+    }
+  },
+  "definitions": {
+    "storedReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "seq",
+        "receipt_version",
+        "receipt_id",
+        "action",
+        "resource_type",
+        "resource_id",
+        "actor_uid",
+        "actor_role",
+        "decision",
+        "idempotency_key",
+        "intent_hash",
+        "signature",
+        "operator_urn",
+        "trace_id",
+        "chain_hash",
+        "created_at",
+        "caller_id",
+        "resource_tenant_id",
+        "policy_sha256",
+        "callers_sha256",
+        "mode",
+        "observe_override",
+        "otel_trace_id"
+      ],
+      "properties": {
+        "seq": { "type": "integer", "minimum": 1, "description": "Position in the chain, starting at 1." },
+        "receipt_version": { "type": "integer", "enum": [1, 2], "description": "Which rules and signature tag verify this row." },
+        "receipt_id": { "type": "string", "pattern": "^rcpt_[0-9a-f]{32}$", "description": "\"rcpt_\" followed by 16 random bytes in hex." },
+        "action": { "type": "string", "minLength": 1, "description": "The action requested, as named in policy.json." },
+        "resource_type": { "type": "string", "minLength": 1, "description": "The type of the resource the action targets." },
+        "resource_id": { "type": "string", "minLength": 1, "description": "The resource the action targets. Signed, so it can't be redacted without breaking verification." },
+        "actor_uid": { "type": "string", "minLength": 1, "description": "The actor identifier the caller supplied." },
+        "actor_role": { "type": "string", "minLength": 1, "description": "The role the decision was made against." },
+        "decision": { "type": "string", "enum": ["ALLOW", "BLOCK"], "description": "The decision." },
+        "idempotency_key": { "type": "string", "minLength": 1, "description": "The request's idempotency key, part of the signed intent." },
+        "intent_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Hex SHA-256 of the row's signed fields, by its version." },
+        "signature": { "type": "string", "pattern": "^[0-9a-f]{128}$", "description": "Hex Ed25519 signature over intent_hash, under the tag for the row's version." },
+        "operator_urn": { "type": "string", "minLength": 1, "description": "The gate instance that made the decision." },
+        "trace_id": { "type": "string", "pattern": "^trc_[0-9a-f]{16}$", "description": "The gate's per-request trace id." },
+        "chain_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Hex SHA-256 link to the receipt before it." },
+        "created_at": { "type": "string", "minLength": 1, "description": "The decision time exactly as stored (RFC 3339, UTC, nanoseconds). Signed in a v2 row." },
+        "caller_id": { "type": "string", "description": "v2: the authenticated credential. Empty in a v1 row." },
+        "resource_tenant_id": { "type": "string", "description": "v2: the tenant named on the resource, empty when none. Empty in a v1 row." },
+        "policy_sha256": { "type": "string", "pattern": "^([0-9a-f]{64})?$", "description": "v2: hex SHA-256 of the policy file the decision used. Empty in a v1 row." },
+        "callers_sha256": { "type": "string", "pattern": "^([0-9a-f]{64})?$", "description": "v2: hex SHA-256 of the callers file, empty in shared-secret mode. Empty in a v1 row." },
+        "mode": { "type": "string", "enum": ["", "enforce", "observe"], "description": "v2: the gate's mode. Empty in a v1 row." },
+        "observe_override": { "type": "boolean", "description": "v2: true when observe mode turned a BLOCK into this ALLOW. False in a v1 row." },
+        "otel_trace_id": { "type": "string", "pattern": "^([0-9a-f]{32})?$", "description": "v2: the caller's W3C trace id, empty when none. Empty in a v1 row." }
+      }
+    }
+  }
+}
