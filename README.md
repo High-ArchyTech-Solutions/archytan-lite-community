@@ -225,10 +225,11 @@ The gate runs it directly, with no shell, kills it along with everything it
 started if it runs too long, and checks its signature before storing
 anything. [checkpoints/](checkpoints/) has signer scripts for HashiCorp
 Vault Transit, tested against a Vault dev server with a sign-only token;
-for PKCS #11 HSMs, tested against a SoftHSM2 software token; and for AWS
-KMS, Google Cloud KMS and Azure Key Vault, written from each provider's
-documentation and not yet tested. The published image has no shell or
-cloud CLI, so build an image from it that adds what your signer needs.
+for PKCS #11 HSMs, tested against a SoftHSM2 software token; for AWS KMS,
+tested against moto's KMS emulation; and for Google Cloud KMS and Azure
+Key Vault, written from each provider's documentation and not yet tested.
+The published image has no shell or cloud CLI, so build an image from it
+that adds what your signer needs.
 
 If the signer can't sign when the gate starts, the gate doesn't start. Once
 it's running, a failing signer never holds up a decision: `/v1/healthz`

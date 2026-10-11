@@ -1,7 +1,9 @@
 #!/bin/sh
 # Archytan Lite checkpoint signer: AWS KMS.
-# Untested: written from the AWS CLI v2 documentation and never run against
-# AWS. Check it with your own key before you rely on it.
+# Tested against moto 5.2.3's KMS emulation with AWS CLI 2.37:
+# testing/checkpoints (TestCheckpoints_AWSKMS) runs it unchanged as a gate's
+# signer. Not yet run against AWS itself, so check it with your own key
+# before you rely on it.
 #
 # Reads the message on stdin, signs it with an asymmetric KMS key (key spec
 # ECC_NIST_P256, key usage SIGN_VERIFY), and prints the signature (ASN.1
