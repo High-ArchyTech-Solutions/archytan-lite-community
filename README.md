@@ -59,7 +59,7 @@ The core of it, if you'd rather type the commands yourself:
 ```sh
 docker volume create archytan-quickstart
 docker run --rm -v archytan-quickstart:/data --entrypoint keygen \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.4.0 -out /data/signing_key.pem
+  ghcr.io/high-archytech-solutions/archytan-lite:2.5.0 -out /data/signing_key.pem
 docker run -d --name archytan-quickstart -p 127.0.0.1:8421:8421 -v archytan-quickstart:/data \
   -e ARCHYTAN_LITE_CALLER_TOKEN=quickstart-token \
   -e ARCHYTAN_LITE_DB_PATH=/data/archytan.db \
@@ -67,7 +67,7 @@ docker run -d --name archytan-quickstart -p 127.0.0.1:8421:8421 -v archytan-quic
   -e ARCHYTAN_LITE_POLICY_PATH=/usr/local/share/archytan-lite/examples/policy.json \
   -e ARCHYTAN_LITE_INSTANCE_URN=urn:archytan-lite:instance:quickstart \
   -e ARCHYTAN_LITE_CAPABILITIES=on \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.4.0
+  ghcr.io/high-archytech-solutions/archytan-lite:2.5.0
 
 curl -s http://127.0.0.1:8421/v1/authorize \
   -H "Authorization: Bearer quickstart-token" -H "Content-Type: application/json" \
@@ -108,7 +108,7 @@ a session it already authenticated. It is unsafe for an AI agent, which
 could simply claim `admin`. Give each caller its own credential instead:
 
 ```sh
-docker run --rm --entrypoint callergen ghcr.io/high-archytech-solutions/archytan-lite:2.4.0 \
+docker run --rm --entrypoint callergen ghcr.io/high-archytech-solutions/archytan-lite:2.5.0 \
   -caller-id agent-invoices -role support_agent
 ```
 
@@ -136,7 +136,7 @@ Both exit nonzero on a finding, so either can gate a CI pipeline:
 
 ```sh
 docker run --rm -v "$PWD/config:/etc/archytan-lite:ro" --entrypoint policylint \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.4.0 \
+  ghcr.io/high-archytech-solutions/archytan-lite:2.5.0 \
   -policy /etc/archytan-lite/policy.json -callers /etc/archytan-lite/callers.json
 ```
 
@@ -169,6 +169,11 @@ trace id. Point your log pipeline's trace id field at `otel_trace_id` and
 the gate's decision sits beside your agent's own spans. The gate only
 reads the header: it starts no spans and sends nothing anywhere, and a
 malformed header is ignored.
+
+An agent behind `archytan-mcp-gate` gets the same without sending a
+header itself: since 2.5.0 the MCP gate passes on a `traceparent` that the
+MCP host or client puts in a tool call's `params._meta`. See
+[What the agent sees](#what-the-agent-sees).
 
 ### Keep the log honest
 
@@ -312,7 +317,7 @@ generate the gate's signing key, keeping the public key it prints for step
 ```sh
 docker volume create archytan-lite
 docker run --rm -v archytan-lite:/data --entrypoint keygen \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.4.0 -out /data/signing_key.pem
+  ghcr.io/high-archytech-solutions/archytan-lite:2.5.0 -out /data/signing_key.pem
 docker run -d --name archytan-lite -p 127.0.0.1:8421:8421 \
   -v archytan-lite:/data -v "$PWD/config:/etc/archytan-lite:ro" \
   -e ARCHYTAN_LITE_CALLERS_PATH=/etc/archytan-lite/callers.json \
@@ -321,7 +326,7 @@ docker run -d --name archytan-lite -p 127.0.0.1:8421:8421 \
   -e ARCHYTAN_LITE_SIGNING_KEY_PATH=/data/signing_key.pem \
   -e ARCHYTAN_LITE_INSTANCE_URN=urn:archytan-lite:instance:agents \
   -e ARCHYTAN_LITE_CAPABILITIES=on \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.4.0
+  ghcr.io/high-archytech-solutions/archytan-lite:2.5.0
 ```
 
 ### 3. Map the tools you want the agent to have
@@ -387,6 +392,14 @@ cannot widen what the operator configured; download 2.3.1 or later if you
 use an earlier MCP gate. The policy decides which actions the agent may
 take, and each receipt records the path, but the policy does not match
 paths: the server's own arguments set its reach.
+
+Since 2.5.0 the MCP gate also passes on the agent's trace. MCP carries
+trace context in a request's `params._meta` (SEP-414), and
+OpenTelemetry-instrumented MCP clients put a W3C `traceparent` there. The
+MCP gate sends it with that call's authorize and redeem, so the receipt
+signs the agent's trace id, and the MCP gate's own ALLOWED and REFUSED
+lines name it too. The call reaches the server unchanged, `_meta` included, and a
+malformed value is ignored without changing the decision.
 
 The MCP gate protects what the agent reaches through it. Make it the only
 path: list the server only through the MCP gate's entry, and give the
