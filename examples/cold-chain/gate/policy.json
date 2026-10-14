@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "actions": [
+    { "action": "refrigeration.setpoint.in_band",     "allowed_roles": ["remote_operator", "refrigeration_engineer"] },
+    { "action": "refrigeration.setpoint.out_of_band", "allowed_roles": ["refrigeration_engineer"] },
+    {
+      "action": "refrigeration.defrost.start",
+      "allowed_roles": ["remote_operator", "refrigeration_engineer"],
+      "assertions": { "max_per_window": 3, "window_seconds": 3600 }
+    },
+    { "action": "refrigeration.compressor.stop",      "allowed_roles": ["refrigeration_engineer"] },
+    { "action": "refrigeration.alarm.change",         "allowed_roles": ["refrigeration_engineer"] }
+  ]
+}
