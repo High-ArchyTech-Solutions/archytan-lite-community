@@ -11,7 +11,7 @@ the grant against the policy in force, so revoking access also cuts off
 capabilities already issued. One binary and one SQLite file, running on
 your own infrastructure, with no telemetry.
 
-This repository is Lite's public home: the quickstart, examples, JSON
+This repository is Archytan Lite's public home: the quickstart, examples, JSON
 Schemas, release notes and issue tracker. The gate is free to run under
 the Community license, and the
 [Node](https://www.npmjs.com/package/@high-archytech-solutions/archytan-lite)
@@ -405,6 +405,20 @@ The MCP gate protects what the agent reaches through it. Make it the only
 path: list the server only through the MCP gate's entry, and give the
 server's own credentials to that entry alone. An agent with a
 general-purpose shell can still start the server by hand.
+
+## A worked example: a compromised management platform
+
+[examples/cold-chain](examples/cold-chain) runs one attack twice against a
+simulated estate of 12 supermarkets and 36 refrigerated cabinets. The
+attacker holds the remote management platform's credentials and tries to
+set every cabinet to +50°C and force a defrost on each. With the
+controllers trusting the platform, all 36 break the cold chain. With
+Archytan Lite in the command path, each controller acts only after spending
+a single-use capability for the exact command it's about to run, and none
+of them does. The controllers are simulated. The gate is the published
+2.5.0 image, and every run checks its 146 signed decisions with the
+standalone verifier. It needs Docker and Python, takes about 15 seconds,
+and its README says what it doesn't cover.
 
 ## Configuration
 

@@ -1,0 +1,69 @@
+# Runs the cold-chain experiment against the published, signed Archytan Lite image and
+# checks every outcome, whenever the example or this workflow changes. Each
+# run pulls the image, and the adoption numbers count image pulls, so it runs
+# only when something it tests changed, or by hand.
+name: Cold-chain example
+
+on:
+  push:
+    branches: [main]
+    paths: ["examples/cold-chain/**", ".github/workflows/cold-chain.yml"]
+  pull_request:
+    paths: ["examples/cold-chain/**", ".github/workflows/cold-chain.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: examples/cold-chain
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # The standalone verifier that every evidence export ships is Go source.
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - uses: sigstore/cosign-installer@v3
+
+      - name: The README, the code and the requirements pin one image and one client
+        run: |
+          images=$(grep -ho 'archytan-lite:[0-9][0-9.]*' README.md gates.py | sort -u)
+          echo "$images"
+          test "$(echo "$images" | wc -l)" -eq 1
+          grep -qx 'archytan-lite==[0-9][0-9.]*' requirements.txt
+
+      - name: Install the client
+        run: python -m pip install -r requirements.txt
+
+      - name: The pinned image is the one Archytan Lite's release workflow signed
+        run: |
+          image=$(python -c "import gates; print(gates.DEFAULT_IMAGE)")
+          docker pull -q "$image"
+          COSIGN_REPOSITORY=ghcr.io/high-archytech-solutions/archytan-lite-signatures \
+          cosign verify "$image" \
+            --certificate-identity-regexp '^https://github.com/High-ArchyTech-Solutions/archytan-lite/\.github/workflows/release\.yml@refs/tags/v' \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com > /dev/null
+
+      - name: Set up the gate's key and the credentials
+        run: python setup_gate.py
+
+      - name: Standard and revocation scenarios, evidence checked by the standalone verifier
+        run: python validate.py --gate docker
+
+      - name: Keep the runs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cold-chain-runs
+          path: examples/cold-chain/runs/
+          if-no-files-found: ignore

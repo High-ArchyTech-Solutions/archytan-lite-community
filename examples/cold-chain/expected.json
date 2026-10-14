@@ -1,0 +1,44 @@
+{
+  "standard": {
+    "open": {"cabinets": 36, "setpoint_executed": 36, "defrost_executed": 36, "broke_cold_chain": 36},
+    "guarded": {
+      "routine_platform": {"decision": "ALLOW", "executed": true},
+      "routine_engineer": {"decision": "ALLOW", "executed": true},
+      "a_direct": {"refused": 36, "executed": 0},
+      "b_asked": {"block": 72, "executed": 0},
+      "c_switched": {"allow": 36, "refused_at_redemption": 36, "executed": 0},
+      "d_defrost": {"allow": 3, "block": 33, "executed": 3},
+      "broke_cold_chain": 0
+    },
+    "evidence": {
+      "verify_chain_prefix": "chain OK: 146 receipt(s) verified",
+      "receipts": {"total": 146, "allow": 41, "block": 105},
+      "showcase_refusal_verifies": true,
+      "decisions_per_policy": [146],
+      "logged_redemption_rejections": 36,
+      "logged_revoked_grant_refusals": 0
+    }
+  },
+  "revoke": {
+    "open": {"cabinets": 36, "setpoint_executed": 36, "defrost_executed": 36, "broke_cold_chain": 36},
+    "guarded": {
+      "routine_platform": {"decision": "ALLOW", "executed": true},
+      "routine_engineer": {"decision": "ALLOW", "executed": true},
+      "a_direct": {"refused": 36, "executed": 0},
+      "b_asked": {"block": 72, "executed": 0},
+      "c_switched": {"allow": 36, "refused_at_redemption": 36, "executed": 0},
+      "d_defrost": {"allow": 3, "block": 33, "executed": 3},
+      "e_revoke": {"held": 3, "held_refused": 3, "held_executed": 0, "new_block": 3, "new_executed": 0,
+                   "engineer": "ALLOW", "engineer_executed": true},
+      "broke_cold_chain": 0
+    },
+    "evidence": {
+      "verify_chain_prefix": "chain OK: 153 receipt(s) verified",
+      "receipts": {"total": 153, "allow": 45, "block": 108},
+      "showcase_refusal_verifies": true,
+      "decisions_per_policy": [149, 4],
+      "logged_redemption_rejections": 36,
+      "logged_revoked_grant_refusals": 3
+    }
+  }
+}
