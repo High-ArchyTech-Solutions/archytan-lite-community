@@ -433,7 +433,7 @@ controllers trusting the platform, all 36 break the cold chain. With
 Archytan Lite in the command path, each controller acts only after spending
 a single-use capability for the exact command it's about to run, and none
 of them does. The controllers are simulated. The gate is the published
-2.5.0 image, and every run checks its 146 signed decisions with the
+2.6.0 image, and every run checks its 146 signed decisions with the
 standalone verifier. It needs Docker and Python, takes about 15 seconds,
 and its README says what it doesn't cover.
 
