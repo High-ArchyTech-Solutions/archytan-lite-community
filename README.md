@@ -59,7 +59,7 @@ The core of it, if you'd rather type the commands yourself:
 ```sh
 docker volume create archytan-quickstart
 docker run --rm -v archytan-quickstart:/data --entrypoint keygen \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.5.1 -out /data/signing_key.pem
+  ghcr.io/high-archytech-solutions/archytan-lite:2.6.0 -out /data/signing_key.pem
 docker run -d --name archytan-quickstart -p 127.0.0.1:8421:8421 -v archytan-quickstart:/data \
   -e ARCHYTAN_LITE_CALLER_TOKEN=quickstart-token \
   -e ARCHYTAN_LITE_DB_PATH=/data/archytan.db \
@@ -67,7 +67,7 @@ docker run -d --name archytan-quickstart -p 127.0.0.1:8421:8421 -v archytan-quic
   -e ARCHYTAN_LITE_POLICY_PATH=/usr/local/share/archytan-lite/examples/policy.json \
   -e ARCHYTAN_LITE_INSTANCE_URN=urn:archytan-lite:instance:quickstart \
   -e ARCHYTAN_LITE_CAPABILITIES=on \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.5.1
+  ghcr.io/high-archytech-solutions/archytan-lite:2.6.0
 
 curl -s http://127.0.0.1:8421/v1/authorize \
   -H "Authorization: Bearer quickstart-token" -H "Content-Type: application/json" \
@@ -108,7 +108,7 @@ a session it already authenticated. It is unsafe for an AI agent, which
 could simply claim `admin`. Give each caller its own credential instead:
 
 ```sh
-docker run --rm --entrypoint callergen ghcr.io/high-archytech-solutions/archytan-lite:2.5.1 \
+docker run --rm --entrypoint callergen ghcr.io/high-archytech-solutions/archytan-lite:2.6.0 \
   -caller-id agent-invoices -role support_agent
 ```
 
@@ -136,7 +136,7 @@ Both exit nonzero on a finding, so either can gate a CI pipeline:
 
 ```sh
 docker run --rm -v "$PWD/config:/etc/archytan-lite:ro" --entrypoint policylint \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.5.1 \
+  ghcr.io/high-archytech-solutions/archytan-lite:2.6.0 \
   -policy /etc/archytan-lite/policy.json -callers /etc/archytan-lite/callers.json
 ```
 
@@ -317,7 +317,7 @@ generate the gate's signing key, keeping the public key it prints for step
 ```sh
 docker volume create archytan-lite
 docker run --rm -v archytan-lite:/data --entrypoint keygen \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.5.1 -out /data/signing_key.pem
+  ghcr.io/high-archytech-solutions/archytan-lite:2.6.0 -out /data/signing_key.pem
 docker run -d --name archytan-lite -p 127.0.0.1:8421:8421 \
   -v archytan-lite:/data -v "$PWD/config:/etc/archytan-lite:ro" \
   -e ARCHYTAN_LITE_CALLERS_PATH=/etc/archytan-lite/callers.json \
@@ -326,7 +326,7 @@ docker run -d --name archytan-lite -p 127.0.0.1:8421:8421 \
   -e ARCHYTAN_LITE_SIGNING_KEY_PATH=/data/signing_key.pem \
   -e ARCHYTAN_LITE_INSTANCE_URN=urn:archytan-lite:instance:agents \
   -e ARCHYTAN_LITE_CAPABILITIES=on \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.5.1
+  ghcr.io/high-archytech-solutions/archytan-lite:2.6.0
 ```
 
 ### 3. Map the tools you want the agent to have
@@ -394,7 +394,11 @@ and the server could read differently, such as one whose keys repeat or
 differ only in case. Earlier MCP gates, from 2.2.0 to 2.5.0, could be led
 to authorize one action while the server ran another; the
 [security advisory](https://github.com/High-ArchyTech-Solutions/archytan-lite-community/security/advisories/GHSA-9ff5-c4g4-rx92) says who is affected. Upgrade the
-MCP gate to 2.5.1 or later. The policy decides which actions the agent may
+MCP gate to 2.5.1 or later. Since 2.6.0 the roots protection holds under
+MCP 2026-07-28 as well, where a host restates its capabilities on every
+request and a server asks for roots by answering a call with
+`input_required`: the MCP gate removes roots from those capabilities and
+refuses a call the server answers with a roots request. The policy decides which actions the agent may
 take, and each receipt records the path, but the policy does not match
 paths: the server's own arguments set its reach.
 
@@ -403,8 +407,16 @@ trace context in a request's `params._meta` (SEP-414), and
 OpenTelemetry-instrumented MCP clients put a W3C `traceparent` there. The
 MCP gate sends it with that call's authorize and redeem, so the receipt
 signs the agent's trace id, and the MCP gate's own ALLOWED and REFUSED
-lines name it too. The call reaches the server unchanged, `_meta` included, and a
-malformed value is ignored without changing the decision.
+lines name it too. The call reaches the server with its `_meta`, less
+the capabilities above, and a malformed value is ignored without
+changing the decision.
+
+Since 2.6.0 the MCP gate relays MCP 2026-07-28 as well as the
+`initialize` handshake, so a client that probes with `server/discover`
+reaches a server's 2026-07-28 support through it and falls back to
+`initialize` when the server predates it. Each round of a call that stops
+to ask the user something is authorized on its own, so it leaves a
+receipt per round.
 
 The MCP gate protects what the agent reaches through it. Make it the only
 path: list the server only through the MCP gate's entry, and give the
