@@ -17,7 +17,7 @@ import time
 
 import httpx
 
-DEFAULT_IMAGE = "ghcr.io/high-archytech-solutions/archytan-lite:2.5.0"
+DEFAULT_IMAGE = "ghcr.io/high-archytech-solutions/archytan-lite:2.6.0"
 
 
 def _sha256(path):

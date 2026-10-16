@@ -57,12 +57,12 @@ verifier (which needs Go), run `validate.py` with the Python in `.venv`:
 ## Verify the image first
 
 The gate image is signed by Archytan Lite's release workflow. To check the
-one this experiment pins (`ghcr.io/high-archytech-solutions/archytan-lite:2.5.0`):
+one this experiment pins (`ghcr.io/high-archytech-solutions/archytan-lite:2.6.0`):
 
 ```sh
 docker run --rm -e COSIGN_REPOSITORY=ghcr.io/high-archytech-solutions/archytan-lite-signatures \
   ghcr.io/sigstore/cosign/cosign:v2.4.1 verify \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.5.0 \
+  ghcr.io/high-archytech-solutions/archytan-lite:2.6.0 \
   --certificate-identity-regexp '^https://github.com/High-ArchyTech-Solutions/archytan-lite/\.github/workflows/release\.yml@refs/tags/v' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
