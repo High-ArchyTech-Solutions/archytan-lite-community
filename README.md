@@ -253,13 +253,17 @@ verifies the signed answer, spends the single-use capability, and only then
 forwards the call. Tools you have not mapped are hidden from the agent and
 refused.
 
+The MCP gate is open source under the Apache License 2.0. Its code and its
+releases from 2.6.2 on are in
+[archytan-mcp-gate](https://github.com/High-ArchyTech-Solutions/archytan-mcp-gate).
+
 ### 1. Download it
 
 Pick your platform: `darwin-arm64`, `darwin-amd64`, `linux-amd64`,
 `linux-arm64`, `windows-amd64.exe` or `windows-arm64.exe`.
 
 ```sh
-base=https://github.com/High-ArchyTech-Solutions/archytan-lite-community/releases/latest/download
+base=https://github.com/High-ArchyTech-Solutions/archytan-mcp-gate/releases/latest/download
 curl -fsSLO "$base/archytan-mcp-gate-darwin-arm64"
 curl -fsSLO "$base/SHA256SUMS"
 grep darwin-arm64 SHA256SUMS | shasum -a 256 -c   # on Linux: sha256sum -c
@@ -269,7 +273,7 @@ mv archytan-mcp-gate-darwin-arm64 archytan-mcp-gate && chmod +x archytan-mcp-gat
 In Windows PowerShell:
 
 ```powershell
-$base = 'https://github.com/High-ArchyTech-Solutions/archytan-lite-community/releases/latest/download'
+$base = 'https://github.com/High-ArchyTech-Solutions/archytan-mcp-gate/releases/latest/download'
 Invoke-WebRequest "$base/archytan-mcp-gate-windows-amd64.exe" -OutFile archytan-mcp-gate.exe -UseBasicParsing
 Invoke-WebRequest "$base/SHA256SUMS" -OutFile SHA256SUMS -UseBasicParsing
 $expected = ((Select-String windows-amd64 SHA256SUMS).Line -split '\s+')[0]
@@ -282,8 +286,19 @@ that the binaries came from it:
 ```sh
 curl -fsSLO "$base/SHA256SUMS.cosign.bundle"
 cosign verify-blob SHA256SUMS --bundle SHA256SUMS.cosign.bundle \
-  --certificate-identity-regexp '^https://github.com/High-ArchyTech-Solutions/archytan-lite/\.github/workflows/mcp-gate-binaries\.yml@refs/' \
+  --certificate-identity-regexp '^https://github.com/High-ArchyTech-Solutions/archytan-mcp-gate/\.github/workflows/release\.yml@refs/tags/v' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+MCP gates up to 2.6.0 were released on this repository. To check one of
+those, use
+`'^https://github.com/High-ArchyTech-Solutions/archytan-lite/\.github/workflows/mcp-gate-binaries\.yml@refs/'`
+as the identity.
+
+Or build it from source with Go:
+
+```sh
+go install github.com/high-archytech-solutions/archytan-mcp-gate/v2/cmd/archytan-mcp-gate@latest
 ```
 
 A macOS binary downloaded through a browser, rather than curl, is
@@ -483,6 +498,9 @@ Images up to 2.2.0 keep their signature in the image's own package: leave
 - **New versions and security fixes:** watch this repository and choose
   *Custom → Releases* to be notified. Release notes live under
   [Releases](https://github.com/High-ArchyTech-Solutions/archytan-lite-community/releases).
+  The MCP gate's releases are on
+  [archytan-mcp-gate](https://github.com/High-ArchyTech-Solutions/archytan-mcp-gate/releases);
+  watch it the same way.
 - **Questions and bugs:** [open an issue](https://github.com/High-ArchyTech-Solutions/archytan-lite-community/issues/new/choose).
 - **Vulnerabilities:** report them privately, as [SECURITY.md](SECURITY.md) describes.
 - **Adoption numbers:** image pulls, npm and PyPI downloads, and this
