@@ -301,6 +301,14 @@ Or build it from source with Go:
 go install github.com/high-archytech-solutions/archytan-mcp-gate/v2/cmd/archytan-mcp-gate@latest
 ```
 
+Hosts that install MCP bundles can take `archytan-mcp-gate.mcpb` from the
+same releases, or find it in the
+[MCP Registry](https://registry.modelcontextprotocol.io) as
+`io.github.High-ArchyTech-Solutions/archytan-mcp-gate`. The host then asks
+for the `mcp-gate.json` below, with the tool server named in its `server`
+field, and for the gate's URL, the agent's token file and the gate's
+public key.
+
 A macOS binary downloaded through a browser, rather than curl, is
 quarantined until you run `xattr -d com.apple.quarantine archytan-mcp-gate`.
 
@@ -432,6 +440,13 @@ reaches a server's 2026-07-28 support through it and falls back to
 `initialize` when the server predates it. Each round of a call that stops
 to ask the user something is authorized on its own, so it leaves a
 receipt per round.
+
+Since 2.7.0 the tool server can be named in `mcp-gate.json`, as
+`"server": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/files"]}`,
+in place of the command after `--`. Name it in one place: with both, or
+neither, the MCP gate refuses to start. `mcp-gate.json` is now read as
+strictly as host messages are, so a key that repeats or differs only in
+case stops it at startup too.
 
 The MCP gate protects what the agent reaches through it. Make it the only
 path: list the server only through the MCP gate's entry, and give the
