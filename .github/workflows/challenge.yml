@@ -1,0 +1,41 @@
+# Runs the MCP challenge exactly as challenge/README.md tells people to, in
+# bash and PowerShell 7, whenever the challenge changes and once a week. The
+# weekly run catches what a change here never would: a new node:22-slim, a
+# moved release asset, or a filesystem server that no longer starts.
+name: MCP challenge
+
+on:
+  push:
+    branches: [main]
+    paths: ["challenge/**", ".github/workflows/challenge.yml"]
+  pull_request:
+    paths: ["challenge/**", ".github/workflows/challenge.yml"]
+  schedule:
+    - cron: "41 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  challenge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # A Lite release bumps the quickstart's pin; this keeps the challenge
+      # on the same image.
+      - name: The challenge pins the quickstart's image
+        run: |
+          pins=$(grep -ho 'archytan-lite:[0-9][0-9.]*' quickstart/quickstart.sh challenge/try-mcp.sh challenge/try-mcp.ps1 | sort -u)
+          echo "$pins"
+          test "$(echo "$pins" | wc -l)" -eq 1
+
+      - name: bash
+        run: bash challenge/try-mcp.sh
+
+      - name: Clean up
+        run: docker rm -f archytan-mcp-challenge && docker volume rm archytan-mcp-challenge archytan-mcp-challenge-work
+
+      - name: PowerShell 7
+        run: pwsh -NoProfile -File challenge/try-mcp.ps1

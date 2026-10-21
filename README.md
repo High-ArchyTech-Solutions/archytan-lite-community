@@ -18,6 +18,24 @@ the Community license, and the
 and [Python](https://pypi.org/project/archytan-lite/) clients are MIT.
 Product overview: [high-archy.tech/lite](https://high-archy.tech/lite).
 
+## The MCP challenge: try to get past it
+
+One command starts a gate, puts the reference MCP filesystem server behind
+the MCP gate, runs an agent session through it, and then makes the attacks
+we want you to try against the gate's API, checking every refusal. It needs
+only Docker:
+
+```sh
+curl -fsSLO https://raw.githubusercontent.com/High-ArchyTech-Solutions/archytan-lite-community/main/challenge/try-mcp.sh
+bash try-mcp.sh
+```
+
+The PowerShell version, what each step does, and where to start your own
+attempts are in [challenge/](challenge/README.md). If something gets through,
+report it privately; whatever happens, the
+[challenge report](https://github.com/High-ArchyTech-Solutions/archytan-lite-community/issues/new?template=challenge-report.yml)
+tells us how it went.
+
 ## Quickstart
 
 Needs Docker and curl. It takes a few seconds once the image is
@@ -256,6 +274,9 @@ refused.
 The MCP gate is open source under the Apache License 2.0. Its code and its
 releases from 2.6.2 on are in
 [archytan-mcp-gate](https://github.com/High-ArchyTech-Solutions/archytan-mcp-gate).
+
+To see the steps below run end to end in one command, with the attacks,
+run [the MCP challenge](challenge/README.md) first.
 
 ### 1. Download it
 

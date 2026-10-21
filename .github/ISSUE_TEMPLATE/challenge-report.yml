@@ -1,0 +1,86 @@
+name: MCP challenge report
+description: How the MCP challenge went for you, whatever happened.
+title: "Challenge report: "
+labels: [challenge]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If something got past the gate, don't describe it here. Report it privately instead, to the
+        [MCP gate](https://github.com/High-ArchyTech-Solutions/archytan-mcp-gate/security/advisories/new)
+        or the [gate](https://github.com/High-ArchyTech-Solutions/archytan-lite-community/security/advisories/new),
+        and we'll credit you in the advisory if you'd like. This form is for everything else,
+        including "it all held" and "I got stuck". Leave out tokens and keys.
+  - type: dropdown
+    id: ran
+    attributes:
+      label: Did try-mcp finish?
+      options:
+        - Yes, every check passed
+        - It stopped with an error (paste the last lines below)
+        - I didn't run it; I went straight to my own MCP server
+    validations:
+      required: true
+  - type: dropdown
+    id: system
+    attributes:
+      label: Where you ran it
+      options:
+        - macOS
+        - Linux
+        - Windows, PowerShell
+        - Windows, Git Bash or WSL
+    validations:
+      required: true
+  - type: input
+    id: minutes
+    attributes:
+      label: Minutes from starting to the first refusal you saw
+      description: A rough number is fine. Leave it empty if you didn't get that far.
+  - type: checkboxes
+    id: tried
+    attributes:
+      label: What you tried
+      options:
+        - label: Claiming another role
+        - label: Spending a capability on another action or resource
+        - label: Spending a capability twice, or after it expired
+        - label: Spending a capability after the policy changed
+        - label: Calling a tool that isn't mapped
+        - label: Prompt injection through your own MCP host
+        - label: MCP messages the MCP gate and the server could read differently
+        - label: Something else (describe below)
+  - type: textarea
+    id: server
+    attributes:
+      label: Your own MCP server, if you put it behind the gate
+      description: What its tools do, and which of them you mapped.
+  - type: textarea
+    id: stuck
+    attributes:
+      label: Where you got stuck, or what confused you
+      description: The step, the command, the error, or the idea that didn't make sense.
+  - type: dropdown
+    id: deploy
+    attributes:
+      label: Would you put it in front of a real agent?
+      options:
+        - "Yes"
+        - Maybe
+        - "No"
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why, or what would change your answer
+  - type: dropdown
+    id: quote
+    attributes:
+      label: May we quote this report when we publish the challenge results?
+      options:
+        - Yes, with my GitHub handle
+        - Yes, without my name
+        - "No"
+    validations:
+      required: true
