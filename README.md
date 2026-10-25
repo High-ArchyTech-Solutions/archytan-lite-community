@@ -474,6 +474,14 @@ path: list the server only through the MCP gate's entry, and give the
 server's own credentials to that entry alone. An agent with a
 general-purpose shell can still start the server by hand.
 
+Claude Code and Claude Desktop give Claude a shell and file tools of their
+own, which never pass through the MCP gate. The MCP gate's
+[locked-workspace kit](https://github.com/High-ArchyTech-Solutions/archytan-mcp-gate/tree/main/locked-workspace)
+makes a workspace folder where those tools are switched off and a hook
+refuses every tool it doesn't name, so the MCP gate's tools are the only way
+to the paths you protect. It covers sessions that run on your own machine,
+started in that folder; a cloud session isn't covered.
+
 ## A worked example: a compromised management platform
 
 [examples/cold-chain](examples/cold-chain) runs one attack twice against a
