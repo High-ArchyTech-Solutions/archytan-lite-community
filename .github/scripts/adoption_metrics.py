@@ -20,6 +20,7 @@ import json
 import os
 import re
 import sys
+import urllib.error
 import urllib.request
 
 NPM_PACKAGE = "@high-archytech-solutions/archytan-lite"
@@ -27,6 +28,10 @@ PYPI_PACKAGE = "archytan-lite"
 GHCR_PAGE = "https://github.com/orgs/high-archytech-solutions/packages/container/package/archytan-lite"
 REPO = os.environ.get("REPO", "High-ArchyTech-Solutions/archytan-lite-community")
 TOKEN = os.environ.get("GH_TOKEN", "")
+# Traffic (views, visitors, clones) needs read access to the repository's
+# administration, which the workflow's own token lacks, so it has a token of
+# its own. The other repository figures never depend on that token.
+TRAFFIC_TOKEN = os.environ.get("TRAFFIC_TOKEN", "")
 
 FIELDS = [
     "date",
@@ -50,11 +55,24 @@ def fetch(url, headers=None):
         return response.read().decode("utf-8", "replace")
 
 
-def github(path):
+def github(path, token=TOKEN):
     headers = {"Accept": "application/vnd.github+json"}
-    if TOKEN:
-        headers["Authorization"] = f"Bearer {TOKEN}"
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
     return json.loads(fetch(f"https://api.github.com{path}", headers))
+
+
+def traffic(path):
+    try:
+        return github(path, TRAFFIC_TOKEN)
+    except urllib.error.HTTPError as err:
+        if err.code == 401:
+            raise RuntimeError(
+                "METRICS_TOKEN was rejected (HTTP 401), so it has expired or been revoked. Make a new "
+                "fine-grained token with read access to this repository's administration and save it "
+                "as the METRICS_TOKEN secret; the next run fills in the last 14 days of traffic"
+            ) from err
+        raise
 
 
 def attempt(name, read):
@@ -128,15 +146,18 @@ def main():
         put(str(yesterday), "github_forks", repo["forks_count"])
         put(str(yesterday), "github_open_issues", repo["open_issues_count"])
 
-    views = attempt("GitHub views", lambda: github(f"/repos/{REPO}/traffic/views"))
-    if views is not None:
-        for v in views["views"]:
-            put(v["timestamp"][:10], "github_views", v["count"])
-            put(v["timestamp"][:10], "github_unique_visitors", v["uniques"])
-    clones = attempt("GitHub clones", lambda: github(f"/repos/{REPO}/traffic/clones"))
-    if clones is not None:
-        for c in clones["clones"]:
-            put(c["timestamp"][:10], "github_clones", c["count"])
+    if not TRAFFIC_TOKEN:
+        print("GitHub traffic: skipped, METRICS_TOKEN isn't set", file=sys.stderr)
+    else:
+        views = attempt("GitHub views", lambda: traffic(f"/repos/{REPO}/traffic/views"))
+        if views is not None:
+            for v in views["views"]:
+                put(v["timestamp"][:10], "github_views", v["count"])
+                put(v["timestamp"][:10], "github_unique_visitors", v["uniques"])
+        clones = attempt("GitHub clones", lambda: traffic(f"/repos/{REPO}/traffic/clones"))
+        if clones is not None:
+            for c in clones["clones"]:
+                put(c["timestamp"][:10], "github_clones", c["count"])
 
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=FIELDS, restval="", lineterminator="\n")

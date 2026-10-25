@@ -27,11 +27,13 @@ jobs:
           path: metrics
 
       # Traffic (views, visitors, clones) needs a token with Administration
-      # read on this repository, which the workflow's own token lacks. With
-      # METRICS_TOKEN unset those three columns stay empty; the rest record.
+      # read on this repository, which the workflow's own token lacks, so it
+      # comes from METRICS_TOKEN. Everything else uses the workflow's token,
+      # so an expired or missing METRICS_TOKEN only empties those three columns.
       - name: Collect
         env:
-          GH_TOKEN: ${{ secrets.METRICS_TOKEN || github.token }}
+          GH_TOKEN: ${{ github.token }}
+          TRAFFIC_TOKEN: ${{ secrets.METRICS_TOKEN }}
           REPO: ${{ github.repository }}
         run: python .github/scripts/adoption_metrics.py metrics/adoption.csv
 
