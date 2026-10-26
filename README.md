@@ -77,7 +77,7 @@ The core of it, if you'd rather type the commands yourself:
 ```sh
 docker volume create archytan-quickstart
 docker run --rm -v archytan-quickstart:/data --entrypoint keygen \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.6.1 -out /data/signing_key.pem
+  ghcr.io/high-archytech-solutions/archytan-lite:2.7.0 -out /data/signing_key.pem
 docker run -d --name archytan-quickstart -p 127.0.0.1:8421:8421 -v archytan-quickstart:/data \
   -e ARCHYTAN_LITE_CALLER_TOKEN=quickstart-token \
   -e ARCHYTAN_LITE_DB_PATH=/data/archytan.db \
@@ -85,7 +85,7 @@ docker run -d --name archytan-quickstart -p 127.0.0.1:8421:8421 -v archytan-quic
   -e ARCHYTAN_LITE_POLICY_PATH=/usr/local/share/archytan-lite/examples/policy.json \
   -e ARCHYTAN_LITE_INSTANCE_URN=urn:archytan-lite:instance:quickstart \
   -e ARCHYTAN_LITE_CAPABILITIES=on \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.6.1
+  ghcr.io/high-archytech-solutions/archytan-lite:2.7.0
 
 curl -s http://127.0.0.1:8421/v1/authorize \
   -H "Authorization: Bearer quickstart-token" -H "Content-Type: application/json" \
@@ -126,7 +126,7 @@ a session it already authenticated. It is unsafe for an AI agent, which
 could simply claim `admin`. Give each caller its own credential instead:
 
 ```sh
-docker run --rm --entrypoint callergen ghcr.io/high-archytech-solutions/archytan-lite:2.6.1 \
+docker run --rm --entrypoint callergen ghcr.io/high-archytech-solutions/archytan-lite:2.7.0 \
   -caller-id agent-invoices -role support_agent
 ```
 
@@ -154,7 +154,7 @@ Both exit nonzero on a finding, so either can gate a CI pipeline:
 
 ```sh
 docker run --rm -v "$PWD/config:/etc/archytan-lite:ro" --entrypoint policylint \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.6.1 \
+  ghcr.io/high-archytech-solutions/archytan-lite:2.7.0 \
   -policy /etc/archytan-lite/policy.json -callers /etc/archytan-lite/callers.json
 ```
 
@@ -337,18 +337,26 @@ quarantined until you run `xattr -d com.apple.quarantine archytan-mcp-gate`.
 
 The MCP gate needs single-use capabilities on and a credential for the
 agent, so the agent's role comes from its credential. This policy lets an
-agent read and list files and keeps writing for an `editor`:
+agent read and list the files in one folder and keeps writing there for an
+`editor`. Anything outside the folder is refused, including a path that
+climbs out of it with `..`:
 
 ```json
 {
   "version": 1,
   "actions": [
-    { "action": "file.read",  "allowed_roles": ["files_agent", "editor"] },
-    { "action": "file.list",  "allowed_roles": ["files_agent", "editor"] },
-    { "action": "file.write", "allowed_roles": ["editor"] }
+    { "action": "file.read",  "grants": [{ "roles": ["files_agent", "editor"], "resource_ids": ["/home/you/projects/demo/**"] }] },
+    { "action": "file.list",  "grants": [{ "roles": ["files_agent", "editor"], "resource_ids": ["/home/you/projects/demo/**"] }] },
+    { "action": "file.write", "grants": [{ "roles": ["editor"],                "resource_ids": ["/home/you/projects/demo/**"] }] }
   ]
 }
 ```
+
+Replace `/home/you/projects/demo` with the folder your filesystem server
+serves, written the way the agent sends paths. A pattern written with `/`
+only matches paths written with `/`, and agents on Windows often send
+backslashes, so there you'd add `"C:\\Users\\you\\projects\\demo\\**"`
+as well. Grants need Archytan Lite 2.7.0 or later.
 
 Save it as `config/policy.json`, create the agent's credential with
 `callergen -caller-id claude-files -role files_agent` (see
@@ -361,7 +369,7 @@ generate the gate's signing key, keeping the public key it prints for step
 ```sh
 docker volume create archytan-lite
 docker run --rm -v archytan-lite:/data --entrypoint keygen \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.6.1 -out /data/signing_key.pem
+  ghcr.io/high-archytech-solutions/archytan-lite:2.7.0 -out /data/signing_key.pem
 docker run -d --name archytan-lite -p 127.0.0.1:8421:8421 \
   -v archytan-lite:/data -v "$PWD/config:/etc/archytan-lite:ro" \
   -e ARCHYTAN_LITE_CALLERS_PATH=/etc/archytan-lite/callers.json \
@@ -370,7 +378,7 @@ docker run -d --name archytan-lite -p 127.0.0.1:8421:8421 \
   -e ARCHYTAN_LITE_SIGNING_KEY_PATH=/data/signing_key.pem \
   -e ARCHYTAN_LITE_INSTANCE_URN=urn:archytan-lite:instance:agents \
   -e ARCHYTAN_LITE_CAPABILITIES=on \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.6.1
+  ghcr.io/high-archytech-solutions/archytan-lite:2.7.0
 ```
 
 ### 3. Map the tools you want the agent to have

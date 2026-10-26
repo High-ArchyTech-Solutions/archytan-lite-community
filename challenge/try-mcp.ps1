@@ -12,7 +12,7 @@
 # Text piped into docker goes out as UTF-8.
 $OutputEncoding = New-Object System.Text.UTF8Encoding $false
 
-$Image = if ($env:IMAGE) { $env:IMAGE } else { 'ghcr.io/high-archytech-solutions/archytan-lite:2.6.1' }
+$Image = if ($env:IMAGE) { $env:IMAGE } else { 'ghcr.io/high-archytech-solutions/archytan-lite:2.7.0' }
 $NodeImage = if ($env:NODE_IMAGE) { $env:NODE_IMAGE } else { 'node:22-slim' }
 $Name = 'archytan-mcp-challenge'
 $Work = "$Name-work"
@@ -74,10 +74,11 @@ Check 'the challenge run'
 Write-Host ''
 Write-Host "== 7. The gate's own log says why each attack was refused, and the decision log verifies"
 $logs = docker logs $Name 2>&1 | ForEach-Object { "$_" }
-$reasons = $logs | Select-String 'escalation attempt refused|does not authorize|already spent|would not be made now' |
+$reasons = $logs | Select-String 'escalation attempt refused|outside every grant|more than one way|does not authorize|already spent|would not be made now' |
     ForEach-Object { ($_.Line -replace '^[0-9/]+ [0-9:]+ (INFO|WARN) ', '' -replace ' trace_id=\S+', '' -replace ' cap_id=\S+', '') }
 $reasons | ForEach-Object { Write-Host "  $_" }
-foreach ($want in 'escalation attempt refused', 'does not authorize this action', 'already spent', 'would not be made now') {
+foreach ($want in 'escalation attempt refused', 'resource outside every grant', 'could be read more than one way',
+    'does not authorize this action', 'already spent', 'would not be made now') {
     if (-not ($reasons -match [regex]::Escape($want))) { throw "unexpected: the gate's log has no `"$want`"" }
 }
 $verify = docker exec -e "ARCHYTAN_LITE_TRUSTED_PUBLIC_KEYS_HEX=$PubKey" $Name archytan-lite --verify-chain
@@ -94,9 +95,10 @@ credential holds the role files_agent:
 
   $token
 
-Try to get past it: claim another role, spend a capability on something it
-wasn't issued for, spend one twice or after the policy changed, or build an
-MCP message the MCP gate and the server read differently. For example:
+Try to get past it: claim another role, read outside /challenge/files, spend
+a capability on something it wasn't issued for, spend one twice or after the
+policy changed, or build an MCP message the MCP gate and the server read
+differently. For example:
 
   try { Invoke-RestMethod -Method Post http://127.0.0.1:$Port/v1/authorize ``
     -Headers @{ Authorization = 'Bearer $token' } -ContentType 'application/json' ``

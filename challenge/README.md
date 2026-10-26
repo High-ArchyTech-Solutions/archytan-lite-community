@@ -24,19 +24,22 @@ scripts on every change and once a week.
 
 1. Creates two Docker volumes, the gate's signing key, and a credential for
    the agent with `callergen`, bound to the role `files_agent`.
-2. Writes the policy, where `files_agent` may read and list files and only
-   `editor` may write, the callers file, and an `mcp-gate.json` that maps
-   three of the filesystem server's tools and names the server.
+2. Writes the policy, where `files_agent` may read and list the files in
+   `/challenge/files` and only `editor` may write there, the callers file,
+   and an `mcp-gate.json` that maps three of the filesystem server's tools
+   and names the server.
 3. Starts the gate on 127.0.0.1:8431 with credential-bound roles and
    single-use capabilities on.
 4. Downloads the MCP gate 2.7.0 for Linux and checks it against the
    release's `SHA256SUMS`.
 5. Puts the reference MCP filesystem server (1.0.0) behind the MCP gate and
-   runs an agent session through it: two allowed calls, a write the agent's
-   role doesn't allow, and a call to a tool that was never mapped.
+   runs an agent session through it: two allowed calls, a read of
+   `/etc/passwd`, a write the agent's role doesn't allow, and a call to a
+   tool that was never mapped.
 6. Makes the attacks straight at the gate's API with the agent's own
-   credential: a claimed role, a capability spent on another action, on
-   another file and twice, and a capability spent after the policy changed.
+   credential: a claimed role, a file outside the scope and a path that
+   climbs out of it, a capability spent on another action, on another file
+   and twice, and a capability spent after the policy changed.
 7. Prints the gate's own log line for each refusal and verifies the signed
    decision log.
 
@@ -48,28 +51,33 @@ one that differs from what it expects. A run ends like this:
   The filesystem server offers 14 tools. Through the MCP gate the agent sees 3:
   read_text_file, write_file, list_directory
 
-  read_text_file readme.txt                ALLOW    signed receipt rcpt_9d89…, capability spent
-  list_directory files/                    ALLOW    signed receipt rcpt_5fdd…, capability spent
+  read_text_file readme.txt                ALLOW    signed receipt rcpt_d839…, capability spent
+  list_directory files/                    ALLOW    signed receipt rcpt_9f47…, capability spent
+  read_text_file /etc/passwd               REFUSED  outside the policy's scope, never reached the server
   write_file readme.txt                    REFUSED  "Refused by Archytan Lite: the gate did not allow this action", file unchanged
   move_file (not mapped)                   REFUSED  never shown to the agent, never reached the gate or the server
 
 == 6. The attacks, straight at the gate's API with the agent's own credential
   Claim the role editor and ask to write   403      BLOCK
-  Ask honestly to read readme.txt          200      ALLOW, capability cap_e3f4…
+  Ask to read /etc/passwd                  403      BLOCK, outside /challenge/files/**
+  Ask to read files/../config/agent.token  403      BLOCK, refused before any match
+  Ask honestly to read readme.txt          200      ALLOW, capability cap_6d9c…
     spend it on a write to readme.txt      403      BLOCK
     spend it on reading notes.txt          403      BLOCK
     spend it on what it was issued for     200      ALLOW, spent
     spend it again                         403      BLOCK
-  Ask to list files/                       200      ALLOW, capability cap_463c…
+  Ask to list files/                       200      ALLOW, capability cap_c9c3…
     take file.list from files_agent, reload          policy reloaded with SIGHUP, no restart
     spend the capability now               403      BLOCK
 
 == 7. The gate's own log says why each attack was refused, and the decision log verifies
+  authorize: resource outside every grant the role holds, refused caller_id=challenge-agent role=files_agent action=file.read resource_id=/etc/passwd
   authorize: role escalation attempt refused caller_id=challenge-agent credential_role=files_agent claimed_role=editor action=file.write
+  authorize: resource id could be read more than one way, refused before any grant was matched ... resource_id=/challenge/files/../config/agent.token reason="segment 3 (\"..\") is made only of dots, ..."
   authorize: rejected reason="capability rejected: capability: token does not authorize this action on this resource"
   redeem: capability already spent caller_id=challenge-agent action=file.read resource_id=/challenge/files/readme.txt
   redeem: capability refused: the grant it carries would not be made now ... reason="role \"files_agent\" is no longer allowed action \"file.list\""
-  chain OK: 6 receipt(s) verified, unbroken from genesis
+  chain OK: 9 receipt(s) verified, unbroken from genesis
 ```
 
 ## Your turn
@@ -80,6 +88,9 @@ agent's token and the gate's public key. Some places to start:
 - **Claim another role.** The script prints a request that claims `admin`.
   Expect a 403, and a log line naming both the role claimed and the role the
   credential holds.
+- **Leave the scope.** Ask for a file outside `/challenge/files`, or for a
+  path that climbs out of it with `..`, `//`, `%2e%2e`, backslashes or
+  Unicode look-alikes. Expect a 403, and a log line saying why.
 - **Reuse a capability.** Ask for an ALLOW, then redeem its capability with
   another action, another resource, twice, or after it expires (30 seconds).
 - **Change the policy under it.** Copy the policy out, edit it, copy it back
@@ -113,8 +124,9 @@ agent's token and the gate's public key. Some places to start:
   agent with a general-purpose shell can start the server by hand; the
   [MCP gate's README](https://github.com/High-ArchyTech-Solutions/archytan-mcp-gate#what-it-doesnt-cover)
   says how to make it the only path.
-- The policy decides which actions a role may take, and doesn't match paths:
-  `file.read` lets `files_agent` read any file the filesystem server serves.
+- The scope matches names. It can't see where a symbolic link inside
+  `/challenge/files` points, so whether a link out of the folder is
+  followed is up to the server.
 - It's a local demonstration. The gate listens on 127.0.0.1 over plain
   HTTP, and the script prints the agent's token so you can use it.
 - The MCP gate download is checked against the release's `SHA256SUMS`.

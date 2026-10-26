@@ -28,12 +28,15 @@ const FILES = `${ROOT}/files`;
 const GATE = process.env.GATE_URL || "http://127.0.0.1:8421";
 const HOST_PORT = process.env.HOST_PORT || "8431";
 
+// Every action is scoped to the files folder: the roles may act on what's in
+// it and on nothing else.
+const SCOPE = `${FILES}/**`;
 const POLICY = {
   version: 1,
   actions: [
-    { action: "file.read", allowed_roles: ["files_agent", "editor"] },
-    { action: "file.list", allowed_roles: ["files_agent", "editor"] },
-    { action: "file.write", allowed_roles: ["editor"] },
+    { action: "file.read", grants: [{ roles: ["files_agent", "editor"], resource_ids: [SCOPE] }] },
+    { action: "file.list", grants: [{ roles: ["files_agent", "editor"], resource_ids: [SCOPE] }] },
+    { action: "file.write", grants: [{ roles: ["editor"], resource_ids: [SCOPE] }] },
   ],
 };
 
@@ -243,6 +246,8 @@ async function run() {
   expect(!read.isError && read.text.includes("may read"), `read_text_file: ${read.text}`);
   const list = await agent.call("list_directory", { path: FILES });
   expect(!list.isError && list.text.includes("readme.txt"), `list_directory: ${list.text}`);
+  const outside = await agent.call("read_text_file", { path: "/etc/passwd" });
+  expect(outside.isError && outside.text.startsWith("Refused by Archytan Lite"), `read_text_file /etc/passwd: ${outside.text}`);
   const write = await agent.call("write_file", { path: readme, content: "overwritten by the agent\n" });
   expect(write.isError && write.text.startsWith("Refused by Archytan Lite"), `write_file: ${write.text}`);
   expect(readFileSync(readme, "utf8") === before, "readme.txt changed although the write was refused");
@@ -253,15 +258,23 @@ async function run() {
   const receipt = (tool) => agent.stderr.find((l) => l.includes(`ALLOWED tool="${tool}"`))?.match(/receipt=(\S+?):/)?.[1];
   row("read_text_file readme.txt", "ALLOW", `signed receipt ${receipt("read_text_file")}, capability spent`);
   row("list_directory files/", "ALLOW", `signed receipt ${receipt("list_directory")}, capability spent`);
+  row("read_text_file /etc/passwd", "REFUSED", "outside the policy's scope, never reached the server");
   row("write_file readme.txt", "REFUSED", `"${write.text}", file unchanged`);
   row(`${unmapped} (not mapped)`, "REFUSED", "never shown to the agent, never reached the gate or the server");
 
   console.log("\n== 6. The attacks, straight at the gate's API with the agent's own credential");
-  console.log("  The credential holds the role files_agent. Policy: files_agent may read and list; only editor may write.\n");
+  console.log("  The credential holds the role files_agent. Policy: files_agent may read and list inside /challenge/files; only editor may write.\n");
 
   const claim = await authorize("file.write", "editor", "file", readme);
   expect(claim.status === 403 && claim.body.decision === "BLOCK", `claimed role: ${JSON.stringify(claim)}`);
   row("Claim the role editor and ask to write", claim.status, claim.body.decision);
+
+  const passwd = await authorize("file.read", "files_agent", "file", "/etc/passwd");
+  expect(passwd.status === 403 && passwd.body.decision === "BLOCK", `read outside the scope: ${JSON.stringify(passwd)}`);
+  row("Ask to read /etc/passwd", passwd.status, `${passwd.body.decision}, outside ${SCOPE}`);
+  const climb = await authorize("file.read", "files_agent", "file", `${FILES}/../config/agent.token`);
+  expect(climb.status === 403 && climb.body.decision === "BLOCK", `climb out of the scope: ${JSON.stringify(climb)}`);
+  row("Ask to read files/../config/agent.token", climb.status, `${climb.body.decision}, refused before any match`);
 
   const grant = await authorize("file.read", "files_agent", "file", readme);
   expect(grant.status === 200 && grant.body.capability?.token, `honest read: ${JSON.stringify(grant)}`);
@@ -285,7 +298,9 @@ async function run() {
   row("Ask to list files/", listGrant.status, `ALLOW, capability ${listGrant.body.capability.cap_id}`);
   await reloadPolicy({
     ...POLICY,
-    actions: POLICY.actions.map((a) => (a.action === "file.list" ? { ...a, allowed_roles: ["editor"] } : a)),
+    actions: POLICY.actions.map((a) =>
+      a.action === "file.list" ? { ...a, grants: [{ roles: ["editor"], resource_ids: [SCOPE] }] } : a,
+    ),
   });
   const revoked = await redeem(listGrant.body.capability.token, "file.list", "directory", FILES);
   await reloadPolicy(POLICY);

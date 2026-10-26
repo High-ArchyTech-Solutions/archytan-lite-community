@@ -2,14 +2,18 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://high-archy.tech/schemas/policy.v1.json",
   "title": "Archytan Lite policy.json",
-  "description": "Answers exactly one question per action: which roles may perform it, at all. An action absent from this file is always BLOCK for every role -- there is no ambient-allow path. See internal/policy/registry.go and the README's Quickstart.",
+  "description": "Says, for each action, which roles may take it, and for an action with grants, on which resources. An action absent from this file is always BLOCK for every role -- there is no ambient-allow path. Archytan Lite also refuses a file with a key this schema doesn't name, a key repeated in one object, or two keys that differ only in case. See internal/policy/registry.go and the README.",
   "type": "object",
   "additionalProperties": false,
   "required": ["version", "actions"],
   "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Optional. The schema this file follows, for editors that read it."
+    },
     "version": {
-      "const": 1,
-      "description": "Format version. Only 1 exists today."
+      "enum": [1, 2],
+      "description": "Format version. 1 and 2 are read the same way; anything else is refused."
     },
     "actions": {
       "type": "array",
@@ -21,7 +25,11 @@
     "rule": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["action", "allowed_roles"],
+      "required": ["action"],
+      "oneOf": [
+        { "required": ["allowed_roles"], "not": { "required": ["grants"] } },
+        { "required": ["grants"], "not": { "required": ["allowed_roles"] } }
+      ],
       "properties": {
         "action": {
           "type": "string",
@@ -32,15 +40,40 @@
           "type": "array",
           "minItems": 1,
           "items": { "type": "string", "minLength": 1 },
-          "description": "Roles permitted to perform this action. An empty list is rejected outright -- omit the action from the file instead, since that already means BLOCK for everyone."
+          "description": "Roles that may take this action on any resource. An empty list is rejected outright -- omit the action from the file instead, since that already means BLOCK for everyone. A rule names its roles here or in grants, never both."
+        },
+        "grants": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/grant" },
+          "description": "Roles paired with the resource ids they may take this action on; any other resource is BLOCK. Read by Archytan Lite 2.7.0 and later. Earlier versions refuse a rule without allowed_roles, so they refuse the whole file rather than run it without its scope."
         },
         "assertions": { "$ref": "#/$defs/assertions" }
+      }
+    },
+    "grant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["roles", "resource_ids"],
+      "properties": {
+        "roles": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Roles this grant applies to. A role named in several grants gets all of them."
+        },
+        "resource_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Patterns matched against the request's resource.id segment by segment, by exact bytes. * matches any run of characters inside one segment; a final ** matches the name before it and everything below it. A pattern must start with a literal name. Before matching, a resource id with ., .. or empty segments, both / and \\, a segment ending in a dot or starting or ending with a space, a Windows device or drive-relative name, or any character outside letters, digits, combining marks and \" -_.~+=,@:#()\" is refused. See the README's \"Scoping an action to the resources it may touch\"."
+        }
       }
     },
     "assertions": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Optional limits checked in addition to allowed_roles, never instead of it. Omit entirely rather than including one that asserts nothing.",
+      "description": "Optional limits checked in addition to allowed_roles or grants, never instead of them. Omit entirely rather than including one that asserts nothing.",
       "properties": {
         "max_per_window": {
           "type": "integer",

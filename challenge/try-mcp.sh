@@ -18,7 +18,7 @@
 set -euo pipefail
 export MSYS_NO_PATHCONV=1 # Git Bash on Windows: pass container paths to Docker as written
 
-IMAGE="${IMAGE:-ghcr.io/high-archytech-solutions/archytan-lite:2.6.1}"
+IMAGE="${IMAGE:-ghcr.io/high-archytech-solutions/archytan-lite:2.7.0}"
 NODE_IMAGE="${NODE_IMAGE:-node:22-slim}"
 NAME=archytan-mcp-challenge
 WORK="$NAME-work"
@@ -67,10 +67,11 @@ docker run --rm --network "container:$NAME" --pid "container:$NAME" -v "$WORK:/c
 
 echo
 echo "== 7. The gate's own log says why each attack was refused, and the decision log verifies"
-REASONS=$(docker logs "$NAME" 2>&1 | grep -E "escalation attempt refused|does not authorize|already spent|would not be made now" \
+REASONS=$(docker logs "$NAME" 2>&1 | grep -E "escalation attempt refused|outside every grant|more than one way|does not authorize|already spent|would not be made now" \
   | sed -E 's/^[0-9\/]+ [0-9:]+ (INFO|WARN) //; s/ trace_id=[^ ]+//; s/ cap_id=[^ ]+//' || true)
 echo "$REASONS" | sed 's/^/  /'
-for want in "escalation attempt refused" "does not authorize this action" "already spent" "would not be made now"; do
+for want in "escalation attempt refused" "resource outside every grant" "could be read more than one way" \
+  "does not authorize this action" "already spent" "would not be made now"; do
   case "$REASONS" in *"$want"*) ;; *) echo "unexpected: the gate's log has no \"$want\"" >&2; exit 1 ;; esac
 done
 VERIFY=$(docker exec -e ARCHYTAN_LITE_TRUSTED_PUBLIC_KEYS_HEX="$PUBKEY" "$NAME" archytan-lite --verify-chain)
@@ -87,9 +88,10 @@ credential holds the role files_agent:
 
   $TOKEN
 
-Try to get past it: claim another role, spend a capability on something it
-wasn't issued for, spend one twice or after the policy changed, or build an
-MCP message the MCP gate and the server read differently. For example:
+Try to get past it: claim another role, read outside /challenge/files, spend
+a capability on something it wasn't issued for, spend one twice or after the
+policy changed, or build an MCP message the MCP gate and the server read
+differently. For example:
 
   curl -s http://127.0.0.1:$PORT/v1/authorize -H "Authorization: Bearer $TOKEN" \\
     -H "Content-Type: application/json" -d '{"action":"file.write",
