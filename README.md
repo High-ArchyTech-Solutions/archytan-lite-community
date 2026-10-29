@@ -399,6 +399,12 @@ hidden:
 }
 ```
 
+A tool that names its resource with several arguments, like a code
+host's `owner` and `repo`, takes `"resource_id_args": ["owner", "repo"]`
+instead (MCP gate 2.8.0 and later), which joins the values with `/`. The
+[MCP gate's README](https://github.com/High-ArchyTech-Solutions/archytan-mcp-gate#a-resource-named-by-several-arguments)
+shows how to scope each tool.
+
 ### 4. Point the host at the MCP gate
 
 The same entry works in a Claude Code project's `.mcp.json` and in Claude

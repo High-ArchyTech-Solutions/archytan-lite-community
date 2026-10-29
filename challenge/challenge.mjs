@@ -20,7 +20,7 @@ import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
-const MCP_GATE_VERSION = "2.7.0";
+const MCP_GATE_VERSION = "2.8.0";
 const FILESYSTEM_SERVER = "@modelcontextprotocol/server-filesystem@1.0.0";
 const ROOT = "/challenge";
 const CONFIG = `${ROOT}/config`;

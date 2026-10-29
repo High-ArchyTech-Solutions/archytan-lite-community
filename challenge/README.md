@@ -30,7 +30,7 @@ scripts on every change and once a week.
    and names the server.
 3. Starts the gate on 127.0.0.1:8431 with credential-bound roles and
    single-use capabilities on.
-4. Downloads the MCP gate 2.7.0 for Linux and checks it against the
+4. Downloads the MCP gate 2.8.0 for Linux and checks it against the
    release's `SHA256SUMS`.
 5. Puts the reference MCP filesystem server (1.0.0) behind the MCP gate and
    runs an agent session through it: two allowed calls, a read of
