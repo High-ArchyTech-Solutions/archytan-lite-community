@@ -18,7 +18,7 @@
 set -euo pipefail
 export MSYS_NO_PATHCONV=1 # Git Bash on Windows: pass container paths to Docker as written
 
-IMAGE="${IMAGE:-ghcr.io/high-archytech-solutions/archytan-lite:2.7.0}"
+IMAGE="${IMAGE:-ghcr.io/high-archytech-solutions/archytan-lite:2.7.1}"
 NODE_IMAGE="${NODE_IMAGE:-node:22-slim}"
 NAME=archytan-mcp-challenge
 WORK="$NAME-work"

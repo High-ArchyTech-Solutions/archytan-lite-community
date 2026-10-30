@@ -12,7 +12,7 @@
 # Text piped into docker goes out as UTF-8.
 $OutputEncoding = New-Object System.Text.UTF8Encoding $false
 
-$Image = if ($env:IMAGE) { $env:IMAGE } else { 'ghcr.io/high-archytech-solutions/archytan-lite:2.7.0' }
+$Image = if ($env:IMAGE) { $env:IMAGE } else { 'ghcr.io/high-archytech-solutions/archytan-lite:2.7.1' }
 $NodeImage = if ($env:NODE_IMAGE) { $env:NODE_IMAGE } else { 'node:22-slim' }
 $Name = 'archytan-mcp-challenge'
 $Work = "$Name-work"
