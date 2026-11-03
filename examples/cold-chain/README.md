@@ -4,7 +4,15 @@ On the night of 11 to 12 October 2026, attackers remotely defrosted
 refrigerated cabinets at several French supermarket chains, by press
 reports in 250 to 350 stores
 ([BleepingComputer](https://www.bleepingcomputer.com/news/security/cyberattack-shuts-down-refrigerators-at-french-supermarkets/)).
-How they got in hasn't been published.
+On the night of 1 to 2 November it happened again, in more than 115 stores
+across Belgium, the Netherlands, Sweden, Luxembourg, Ireland and Estonia
+([BleepingComputer](https://www.bleepingcomputer.com/news/security/hackers-disrupt-refrigeration-systems-at-european-supermarkets/)).
+The refrigeration contractor said the attacker used the same vulnerability
+as in France, without saying what it is, and that the affected units need
+physical modifications as well as a software update. Reports describe
+attackers reaching internet-connected controllers. This experiment starts
+from a different point, a compromised management platform, and the table
+under "Where the trust moved" says what that leaves out.
 
 This experiment asks one question about that kind of attack: when someone
 takes over the platform that manages refrigeration controllers, does that
@@ -57,12 +65,12 @@ verifier (which needs Go), run `validate.py` with the Python in `.venv`:
 ## Verify the image first
 
 The gate image is signed by Archytan Lite's release workflow. To check the
-one this experiment pins (`ghcr.io/high-archytech-solutions/archytan-lite:2.6.0`):
+one this experiment pins (`ghcr.io/high-archytech-solutions/archytan-lite:2.7.1`):
 
 ```sh
 docker run --rm -e COSIGN_REPOSITORY=ghcr.io/high-archytech-solutions/archytan-lite-signatures \
   ghcr.io/sigstore/cosign/cosign:v2.4.1 verify \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.6.0 \
+  ghcr.io/high-archytech-solutions/archytan-lite:2.7.1 \
   --certificate-identity-regexp '^https://github.com/High-ArchyTech-Solutions/archytan-lite/\.github/workflows/release\.yml@refs/tags/v' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
