@@ -77,7 +77,7 @@ The core of it, if you'd rather type the commands yourself:
 ```sh
 docker volume create archytan-quickstart
 docker run --rm -v archytan-quickstart:/data --entrypoint keygen \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.7.2 -out /data/signing_key.pem
+  ghcr.io/high-archytech-solutions/archytan-lite:2.7.3 -out /data/signing_key.pem
 docker run -d --name archytan-quickstart -p 127.0.0.1:8421:8421 -v archytan-quickstart:/data \
   -e ARCHYTAN_LITE_CALLER_TOKEN=quickstart-token \
   -e ARCHYTAN_LITE_DB_PATH=/data/archytan.db \
@@ -85,7 +85,7 @@ docker run -d --name archytan-quickstart -p 127.0.0.1:8421:8421 -v archytan-quic
   -e ARCHYTAN_LITE_POLICY_PATH=/usr/local/share/archytan-lite/examples/policy.json \
   -e ARCHYTAN_LITE_INSTANCE_URN=urn:archytan-lite:instance:quickstart \
   -e ARCHYTAN_LITE_CAPABILITIES=on \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.7.2
+  ghcr.io/high-archytech-solutions/archytan-lite:2.7.3
 
 curl -s http://127.0.0.1:8421/v1/authorize \
   -H "Authorization: Bearer quickstart-token" -H "Content-Type: application/json" \
@@ -126,7 +126,7 @@ a session it already authenticated. It is unsafe for an AI agent, which
 could simply claim `admin`. Give each caller its own credential instead:
 
 ```sh
-docker run --rm --entrypoint callergen ghcr.io/high-archytech-solutions/archytan-lite:2.7.2 \
+docker run --rm --entrypoint callergen ghcr.io/high-archytech-solutions/archytan-lite:2.7.3 \
   -caller-id agent-invoices -role support_agent
 ```
 
@@ -154,7 +154,7 @@ Both exit nonzero on a finding, so either can gate a CI pipeline:
 
 ```sh
 docker run --rm -v "$PWD/config:/etc/archytan-lite:ro" --entrypoint policylint \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.7.2 \
+  ghcr.io/high-archytech-solutions/archytan-lite:2.7.3 \
   -policy /etc/archytan-lite/policy.json -callers /etc/archytan-lite/callers.json
 ```
 
@@ -177,6 +177,14 @@ credential, tenant and mode each decision was made under. Clients from
 didn't expect. A client before 2.1.0 can't verify a version 2 receipt and
 denies, so upgrade the clients before the gate, or keep the gate on version
 1 receipts with `ARCHYTAN_LITE_RECEIPT_VERSION=1` until they're upgraded.
+
+From 2.7.3, the gate refuses a request body unless every JSON reader would
+read it the same way. The body must be one JSON object that uses only the
+documented keys, each once and in lowercase. Duplicate keys, keys in
+another case, unknown keys, anything after the object, and invalid text get
+the same BLOCK as any malformed request. The clients send exactly that
+shape. If your own code adds extra fields inside `actor` or `resource`,
+remove them before upgrading.
 
 ### Follow a decision into your traces
 
@@ -369,7 +377,7 @@ generate the gate's signing key, keeping the public key it prints for step
 ```sh
 docker volume create archytan-lite
 docker run --rm -v archytan-lite:/data --entrypoint keygen \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.7.2 -out /data/signing_key.pem
+  ghcr.io/high-archytech-solutions/archytan-lite:2.7.3 -out /data/signing_key.pem
 docker run -d --name archytan-lite -p 127.0.0.1:8421:8421 \
   -v archytan-lite:/data -v "$PWD/config:/etc/archytan-lite:ro" \
   -e ARCHYTAN_LITE_CALLERS_PATH=/etc/archytan-lite/callers.json \
@@ -378,7 +386,7 @@ docker run -d --name archytan-lite -p 127.0.0.1:8421:8421 \
   -e ARCHYTAN_LITE_SIGNING_KEY_PATH=/data/signing_key.pem \
   -e ARCHYTAN_LITE_INSTANCE_URN=urn:archytan-lite:instance:agents \
   -e ARCHYTAN_LITE_CAPABILITIES=on \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.7.2
+  ghcr.io/high-archytech-solutions/archytan-lite:2.7.3
 ```
 
 ### 3. Map the tools you want the agent to have
