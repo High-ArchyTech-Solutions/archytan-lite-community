@@ -1,0 +1,45 @@
+# Runs the gated runner's attack suite against the published, signed Archytan
+# Lite image whenever the example or this workflow changes. Each run pulls the
+# image, and the adoption numbers count image pulls, so it runs only when
+# something it tests changed, or by hand.
+name: Gated runner example
+
+on:
+  push:
+    branches: [main]
+    paths: ["examples/gated-runner/**", ".github/workflows/gated-runner.yml"]
+  pull_request:
+    paths: ["examples/gated-runner/**", ".github/workflows/gated-runner.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  attacks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: examples/gated-runner
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: sigstore/cosign-installer@v3
+
+      - name: The example's files pin one image
+        run: |
+          images=$(grep -ho 'archytan-lite:[0-9][0-9.]*' README.md docker-compose.yml setup.sh test-attacks.sh sandbox/Dockerfile | sort -u)
+          echo "$images"
+          test "$(echo "$images" | wc -l)" -eq 1
+
+      - name: The pinned image is the one Archytan Lite's release workflow signed
+        run: |
+          image=$(grep -o 'ghcr.io/high-archytech-solutions/archytan-lite:[0-9][0-9.]*' test-attacks.sh | head -1)
+          docker pull -q "$image"
+          COSIGN_REPOSITORY=ghcr.io/high-archytech-solutions/archytan-lite-signatures \
+          cosign verify "$image" \
+            --certificate-identity-regexp '^https://github.com/High-ArchyTech-Solutions/archytan-lite/\.github/workflows/release\.yml@refs/tags/v' \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com > /dev/null
+
+      - name: Attack suite
+        run: bash test-attacks.sh

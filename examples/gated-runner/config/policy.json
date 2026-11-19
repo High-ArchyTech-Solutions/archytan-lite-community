@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "actions": [
+    { "action": "file.read",    "grants": [{ "roles": ["assistant", "owner"], "resource_ids": ["/work/**"] }] },
+    { "action": "file.write",   "grants": [{ "roles": ["assistant", "owner"], "resource_ids": ["/work/**"] }] },
+    { "action": "code.run",     "grants": [{ "roles": ["assistant", "owner"], "resource_ids": ["/work/**"] }] },
+    { "action": "file.delete",  "grants": [{ "roles": ["owner"], "resource_ids": ["/work/**"] }] },
+    { "action": "net.use",      "grants": [{ "roles": ["owner"], "resource_ids": ["/work/**"] }] },
+    { "action": "exec.unknown", "grants": [{ "roles": ["owner"], "resource_ids": ["/work/**"] }] }
+  ]
+}

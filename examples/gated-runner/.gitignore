@@ -1,0 +1,4 @@
+# Written by setup.sh: credentials and the callers file that holds their digests.
+secrets/
+# test-attacks.sh state, removed when it ends.
+.test-state/

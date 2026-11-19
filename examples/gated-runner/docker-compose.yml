@@ -1,0 +1,132 @@
+# The gated runner: an agent whose only way to act is through Archytan Lite.
+#
+#   agent  ──authorize──▶  gate (Archytan Lite)
+#     │                       ▲
+#     └──── run ────▶ runner ─┘ redeem, with the runner's own credential
+#                       │
+#                       └─ Unix socket (a volume only these two mount)
+#                       ▼
+#                    sandbox: no network, read-only, the workspace at /work
+#
+# The agent holds one credential, for the gate: it can ask for capabilities
+# (and spend its own there, which runs nothing). It has no Docker socket, no
+# workspace, no route to the sandbox and no internet. The runner spends a capability for every path a command
+# touches before the sandbox is asked to do anything.
+#
+# Run ./setup.sh once, then: docker compose up -d --wait
+#
+# STATE_DIR (default ./secrets) holds what setup.sh writes: both credentials
+# and the callers file. test-attacks.sh runs under its own project name and
+# state folder, so it never touches a deployment started from here.
+name: ${COMPOSE_PROJECT_NAME:-archytan-gated-runner}
+
+x-hardened: &hardened
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+
+services:
+  gate:
+    <<: *hardened
+    image: ${LITE_IMAGE:-ghcr.io/high-archytech-solutions/archytan-lite:2.8.0}
+    environment:
+      ARCHYTAN_LITE_CALLERS_PATH: /state/callers.json
+      ARCHYTAN_LITE_POLICY_PATH: /config/policy.json
+      ARCHYTAN_LITE_DB_PATH: /data/archytan.db
+      ARCHYTAN_LITE_SIGNING_KEY_PATH: /data/signing_key.pem
+      ARCHYTAN_LITE_INSTANCE_URN: urn:archytan-lite:instance:gated-runner-example
+      ARCHYTAN_LITE_CAPABILITIES: "on"
+    volumes:
+      - gate-data:/data
+      - ./config:/config:ro
+      - ${STATE_DIR:-./secrets}/callers:/state:ro
+    networks: [agents]
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/archytan-lite", "--healthcheck"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  sandbox:
+    <<: *hardened
+    build:
+      context: ./sandbox
+      args:
+        LITE_IMAGE: ${LITE_IMAGE:-ghcr.io/high-archytech-solutions/archytan-lite:2.8.0}
+    image: ${COMPOSE_PROJECT_NAME:-archytan-gated-runner}-sandbox:local
+    # No network at all: commands can't reach the gate, the agent or the
+    # internet. The executor is reached only through the socket volume.
+    network_mode: none
+    tmpfs:
+      - /tmp:size=64m
+      - /home/agent:size=64m,uid=1000,gid=1000
+    pids_limit: 256
+    mem_limit: 1g
+    cpus: 2
+    volumes:
+      - workspace:/work
+      - runner-socket:/run/archytan-runner
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/archytan-lite-runner", "exec", "-healthcheck"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  runner:
+    <<: *hardened
+    image: ${LITE_IMAGE:-ghcr.io/high-archytech-solutions/archytan-lite:2.8.0}
+    entrypoint: ["/usr/local/bin/archytan-lite-runner"]
+    environment:
+      ARCHYTAN_RUNNER_GATE_URL: http://gate:8421
+      ARCHYTAN_RUNNER_TOKEN_PATH: /run/secrets/runner_token
+      ARCHYTAN_RUNNER_WORKSPACE: /work
+    secrets: [runner_token]
+    volumes:
+      - type: volume
+        source: runner-socket
+        target: /run/archytan-runner
+        volume: { nocopy: true }
+    networks: [agents]
+    depends_on:
+      gate: { condition: service_healthy }
+      sandbox: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/archytan-lite-runner", "-healthcheck"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+  # A stand-in for your agent: anything that can make HTTP requests. A real
+  # agent also needs its model's API; give it a second network with egress
+  # for that. It still has no route into the sandbox.
+  agent:
+    <<: *hardened
+    build: ./agent
+    image: ${COMPOSE_PROJECT_NAME:-archytan-gated-runner}-agent:local
+    environment:
+      GATE_URL: http://gate:8421
+      RUNNER_URL: http://runner:8431
+      AGENT_TOKEN_PATH: /run/secrets/agent_token
+    secrets: [agent_token]
+    tmpfs: [/tmp:size=16m]
+    networks: [agents]
+    depends_on:
+      runner: { condition: service_healthy }
+
+networks:
+  # internal: no route to the internet. The Docker host's own address on it
+  # (the gateway) still answers: keep the Docker API and other host services
+  # off it (see the README's "What holds it").
+  agents:
+    internal: true
+
+volumes:
+  gate-data:
+  workspace:
+  runner-socket:
+
+secrets:
+  runner_token:
+    file: ${STATE_DIR:-./secrets}/runner.token
+  agent_token:
+    file: ${STATE_DIR:-./secrets}/agent.token
