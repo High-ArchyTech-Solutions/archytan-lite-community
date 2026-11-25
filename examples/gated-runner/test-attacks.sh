@@ -13,7 +13,7 @@
 set -euo pipefail
 export MSYS_NO_PATHCONV=1
 cd "$(dirname "$0")"
-export LITE_IMAGE="${LITE_IMAGE:-ghcr.io/high-archytech-solutions/archytan-lite:2.8.0}"
+export LITE_IMAGE="${LITE_IMAGE:-ghcr.io/high-archytech-solutions/archytan-lite:2.9.0}"
 export COMPOSE_PROJECT_NAME=archytan-gated-runner-test
 export STATE_DIR=./.test-state
 

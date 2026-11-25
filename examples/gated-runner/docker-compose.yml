@@ -28,7 +28,7 @@ x-hardened: &hardened
 services:
   gate:
     <<: *hardened
-    image: ${LITE_IMAGE:-ghcr.io/high-archytech-solutions/archytan-lite:2.8.0}
+    image: ${LITE_IMAGE:-ghcr.io/high-archytech-solutions/archytan-lite:2.9.0}
     environment:
       ARCHYTAN_LITE_CALLERS_PATH: /state/callers.json
       ARCHYTAN_LITE_POLICY_PATH: /config/policy.json
@@ -52,7 +52,7 @@ services:
     build:
       context: ./sandbox
       args:
-        LITE_IMAGE: ${LITE_IMAGE:-ghcr.io/high-archytech-solutions/archytan-lite:2.8.0}
+        LITE_IMAGE: ${LITE_IMAGE:-ghcr.io/high-archytech-solutions/archytan-lite:2.9.0}
     image: ${COMPOSE_PROJECT_NAME:-archytan-gated-runner}-sandbox:local
     # No network at all: commands can't reach the gate, the agent or the
     # internet. The executor is reached only through the socket volume.
@@ -74,7 +74,7 @@ services:
 
   runner:
     <<: *hardened
-    image: ${LITE_IMAGE:-ghcr.io/high-archytech-solutions/archytan-lite:2.8.0}
+    image: ${LITE_IMAGE:-ghcr.io/high-archytech-solutions/archytan-lite:2.9.0}
     entrypoint: ["/usr/local/bin/archytan-lite-runner"]
     environment:
       ARCHYTAN_RUNNER_GATE_URL: http://gate:8421

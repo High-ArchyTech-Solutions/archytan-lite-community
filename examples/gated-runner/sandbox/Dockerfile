@@ -2,7 +2,7 @@
 # agent needs, then copy in the executor and make it the first process.
 # It runs as an ordinary user; the compose file adds no network, a
 # read-only root and no capabilities.
-ARG LITE_IMAGE=ghcr.io/high-archytech-solutions/archytan-lite:2.8.0
+ARG LITE_IMAGE=ghcr.io/high-archytech-solutions/archytan-lite:2.9.0
 FROM ${LITE_IMAGE} AS lite
 
 FROM python:3.12-slim-bookworm
