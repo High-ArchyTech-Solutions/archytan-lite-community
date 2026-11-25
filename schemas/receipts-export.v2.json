@@ -55,7 +55,7 @@
         "resource_id": { "type": "string", "minLength": 1, "description": "The resource the action targets. Signed, so it can't be redacted without breaking verification." },
         "actor_uid": { "type": "string", "minLength": 1, "description": "The actor identifier the caller supplied." },
         "actor_role": { "type": "string", "minLength": 1, "description": "The role the decision was made against." },
-        "decision": { "type": "string", "enum": ["ALLOW", "BLOCK"], "description": "The decision." },
+        "decision": { "type": "string", "enum": ["ALLOW", "BLOCK", "HOLD"], "description": "The decision. HOLD answers a request a rule with a hold would otherwise allow, and is resolved later in the chain by exactly one ALLOW or BLOCK whose idempotency_key is \"hold:\" followed by the HOLD receipt's receipt_id." },
         "idempotency_key": { "type": "string", "minLength": 1, "description": "The request's idempotency key, part of the signed intent." },
         "intent_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Hex SHA-256 of the row's signed fields, by its version." },
         "signature": { "type": "string", "pattern": "^[0-9a-f]{128}$", "description": "Hex Ed25519 signature over intent_hash, under the tag for the row's version." },

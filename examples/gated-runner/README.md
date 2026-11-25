@@ -207,6 +207,32 @@ spent; ask for new ones.
 `agent/gated.py` does all three steps in one call (`gated.run`,
 `gated.write`), with Python's standard library only.
 
+## Held actions
+
+If the gate's policy holds an action for a person's approval (Archytan Lite
+2.9.0, `hold` in the policy), the gate answers `/v1/authorize` with 202 and
+no capability. `agent/gated.py` treats that as "not yet": it asks for every
+path first, and if any is held it reads each hold (`GET /v1/holds/{id}`, with
+the agent's token, every 2 seconds) until none is open. Nothing runs while
+it waits, and nothing runs unless every held path is approved. If any hold
+is denied, expires, is refused by the gate or isn't answered in time, the
+whole command is refused, and the reason names the path and the hold's
+state.
+
+When all are approved, the agent asks again for the paths that weren't held
+(a capability lasts 30 seconds from when it's minted, and the wait may have
+used that up), and then collects each held path by sending its original
+request again, same body and same `idempotency_key`. Only then are the
+capabilities handed to the runner. The agent doesn't verify receipt
+signatures, but it accepts a 202 only as a hold with a hold id that matches
+a HOLD receipt; any other 202 is a refusal.
+
+The agent waits at most `HOLD_WAIT_SECONDS` (default 300) from when it starts
+waiting, or until the earliest hold expires, whichever comes first. `0` means
+don't wait: a held action is refused at once. `HOLD_POLL_SECONDS` (default 2)
+sets how often holds are read. The example's own policy holds nothing; the
+waiting logic is tested without Docker by `python -I agent/test_gated_holds.py`.
+
 ## The runner's API
 
 The runner doesn't authenticate callers. Anything that can reach it (in this
@@ -643,7 +669,7 @@ token goes in the file `ARCHYTAN_RUNNER_TOKEN_PATH` names. `setup.sh` shows
 both steps:
 
 ```sh
-docker run --rm --entrypoint callergen ghcr.io/high-archytech-solutions/archytan-lite:2.8.0 \
+docker run --rm --entrypoint callergen ghcr.io/high-archytech-solutions/archytan-lite:2.9.0 \
   -caller-id runner -role runner -json
 ```
 
@@ -653,7 +679,7 @@ choosing; the gate's container has to mount the same volume at `/data`. (In
 this example Compose names it `archytan-gated-runner_gate-data`.)
 
 ```sh
-docker run --rm -v my-gate-data:/data --entrypoint keygen ghcr.io/high-archytech-solutions/archytan-lite:2.8.0 \
+docker run --rm -v my-gate-data:/data --entrypoint keygen ghcr.io/high-archytech-solutions/archytan-lite:2.9.0 \
   -out /data/signing_key.pem
 ```
 
@@ -680,7 +706,7 @@ needs:
 - copy in the executor:
 
   ```dockerfile
-  COPY --from=ghcr.io/high-archytech-solutions/archytan-lite:2.8.0 \
+  COPY --from=ghcr.io/high-archytech-solutions/archytan-lite:2.9.0 \
     /usr/local/bin/archytan-lite-runner /usr/local/bin/
   ```
 
@@ -736,4 +762,6 @@ The example's own settings: `LITE_IMAGE` (the Archytan Lite image),
 `COMPOSE_PROJECT_NAME` (the Compose project, which names the containers and
 volumes; default `archytan-gated-runner`). The stand-in agent reads
 `GATE_URL`, `RUNNER_URL` and `AGENT_TOKEN_PATH`; an agent of your own needs
-the same three things.
+the same three things. It also reads `HOLD_WAIT_SECONDS` and
+`HOLD_POLL_SECONDS` (see Held actions), which only matter when the policy holds
+an action.

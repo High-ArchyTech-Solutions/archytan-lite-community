@@ -42,7 +42,7 @@
     "actor_uid": { "type": "string", "minLength": 1, "description": "The actor identifier the caller supplied." },
     "actor_role": { "type": "string", "minLength": 1, "description": "The role the decision was made against: the credential's role in bound mode, the request's in shared-secret mode." },
     "caller_id": { "type": "string", "minLength": 1, "description": "The authenticated credential: its caller_id from the callers file in bound mode, \"shared-secret-caller\" in shared-secret mode." },
-    "decision": { "type": "string", "enum": ["ALLOW", "BLOCK"], "description": "The decision." },
+    "decision": { "type": "string", "enum": ["ALLOW", "BLOCK", "HOLD"], "description": "The decision. HOLD (Archytan Lite 2.9.0 and later) answers a request a rule with a hold would otherwise allow; it carries no capability, and the chain later holds exactly one ALLOW or BLOCK resolving it, whose idempotency_key is \"hold:\" followed by the HOLD receipt's receipt_id. An approval or denial names the approver in caller_id, actor_uid and actor_role; an expiry names the caller that asked." },
     "mode": { "type": "string", "enum": ["enforce", "observe"], "description": "The gate's mode when it decided." },
     "observe_override": { "type": "boolean", "description": "True only when observe mode turned what would have been a BLOCK into this ALLOW." },
     "policy_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Hex SHA-256 of the policy file bytes the decision was made against: the same hash Archytan Strategos records for an applied change." },

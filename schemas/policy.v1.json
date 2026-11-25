@@ -48,7 +48,28 @@
           "items": { "$ref": "#/$defs/grant" },
           "description": "Roles paired with the resource ids they may take this action on; any other resource is BLOCK. Read by Archytan Lite 2.7.0 and later. Earlier versions refuse a rule without allowed_roles, so they refuse the whole file rather than run it without its scope."
         },
-        "assertions": { "$ref": "#/$defs/assertions" }
+        "assertions": { "$ref": "#/$defs/assertions" },
+        "hold": { "$ref": "#/$defs/hold" }
+      }
+    },
+    "hold": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["approver_roles", "ttl_seconds"],
+      "description": "Makes every request this rule would otherwise allow wait for a person. The gate answers HOLD with a signed HOLD receipt and no capability. A caller holding one of approver_roles, with a different credential from the one that asked, approves or denies it at /v1/holds; approval mints the ALLOW and the capability for the caller that asked. A hold nobody answers within ttl_seconds becomes a BLOCK. Needs ARCHYTAN_LITE_CALLERS_PATH, ARCHYTAN_LITE_CAPABILITIES=on and version 2 receipts. Read by Archytan Lite 2.9.0 and later; earlier versions refuse the whole file rather than run it without the hold.",
+      "properties": {
+        "approver_roles": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Roles that may approve or deny a held request. None of them may be a role the rule lets take the action."
+        },
+        "ttl_seconds": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 86400,
+          "description": "How long a held request waits for an answer before it becomes a BLOCK, from 60 seconds to one day."
+        }
       }
     },
     "grant": {

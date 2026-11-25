@@ -41,5 +41,8 @@ jobs:
             --certificate-identity-regexp '^https://github.com/High-ArchyTech-Solutions/archytan-lite/\.github/workflows/release\.yml@refs/tags/v' \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com > /dev/null
 
+      - name: The agent waits for held paths (no Docker)
+        run: python3 -I agent/test_gated_holds.py
+
       - name: Attack suite
         run: bash test-attacks.sh

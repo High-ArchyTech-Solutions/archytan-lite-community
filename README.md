@@ -77,7 +77,7 @@ The core of it, if you'd rather type the commands yourself:
 ```sh
 docker volume create archytan-quickstart
 docker run --rm -v archytan-quickstart:/data --entrypoint keygen \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.8.0 -out /data/signing_key.pem
+  ghcr.io/high-archytech-solutions/archytan-lite:2.9.0 -out /data/signing_key.pem
 docker run -d --name archytan-quickstart -p 127.0.0.1:8421:8421 -v archytan-quickstart:/data \
   -e ARCHYTAN_LITE_CALLER_TOKEN=quickstart-token \
   -e ARCHYTAN_LITE_DB_PATH=/data/archytan.db \
@@ -85,7 +85,7 @@ docker run -d --name archytan-quickstart -p 127.0.0.1:8421:8421 -v archytan-quic
   -e ARCHYTAN_LITE_POLICY_PATH=/usr/local/share/archytan-lite/examples/policy.json \
   -e ARCHYTAN_LITE_INSTANCE_URN=urn:archytan-lite:instance:quickstart \
   -e ARCHYTAN_LITE_CAPABILITIES=on \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.8.0
+  ghcr.io/high-archytech-solutions/archytan-lite:2.9.0
 
 curl -s http://127.0.0.1:8421/v1/authorize \
   -H "Authorization: Bearer quickstart-token" -H "Content-Type: application/json" \
@@ -118,6 +118,28 @@ docker kill -s HUP archytan-quickstart
 The gate validates the new file before swapping it in. A file that fails
 validation is refused and logged, and the previous policy keeps serving.
 
+### Hold an action for a person's approval
+
+From 2.9.0, a rule can make an action wait for a person:
+
+```json
+{ "action": "payment.refund", "allowed_roles": ["support_agent"],
+  "hold": { "approver_roles": ["supervisor"], "ttl_seconds": 900 } }
+```
+
+A request that passes every other check gets `202` with `"decision": "HOLD"`,
+a signed HOLD receipt and no capability. A caller with an approver role
+answers it on its own credential with `POST /v1/holds/{hold_id}/approve` or
+`/deny`, and `GET /v1/holds` lists what it may answer. The agent collects an
+approval by repeating its request with the same `idempotency_key`, and only
+then is its single-use capability minted. A hold nobody answers within
+`ttl_seconds` becomes a BLOCK. Each answer is one signed receipt that names
+the approver, so the chain shows who approved what and when. Nobody answers
+their own request, and a policy that lets a role both take an action and
+approve it is refused at load. Holds need bound callers (next section),
+capabilities on and version 2 receipts. The gate sends no notifications, so
+approvers check for open holds.
+
 ### Bind roles to credentials before an agent calls the gate
 
 The quickstart uses one shared token, so the gate takes the role from the
@@ -126,7 +148,7 @@ a session it already authenticated. It is unsafe for an AI agent, which
 could simply claim `admin`. Give each caller its own credential instead:
 
 ```sh
-docker run --rm --entrypoint callergen ghcr.io/high-archytech-solutions/archytan-lite:2.8.0 \
+docker run --rm --entrypoint callergen ghcr.io/high-archytech-solutions/archytan-lite:2.9.0 \
   -caller-id agent-invoices -role support_agent
 ```
 
@@ -154,7 +176,7 @@ Both exit nonzero on a finding, so either can gate a CI pipeline:
 
 ```sh
 docker run --rm -v "$PWD/config:/etc/archytan-lite:ro" --entrypoint policylint \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.8.0 \
+  ghcr.io/high-archytech-solutions/archytan-lite:2.9.0 \
   -policy /etc/archytan-lite/policy.json -callers /etc/archytan-lite/callers.json
 ```
 
@@ -177,6 +199,12 @@ credential, tenant and mode each decision was made under. Clients from
 didn't expect. A client before 2.1.0 can't verify a version 2 receipt and
 denies, so upgrade the clients before the gate, or keep the gate on version
 1 receipts with `ARCHYTAN_LITE_RECEIPT_VERSION=1` until they're upgraded.
+
+The 2.2 clients wait for a hold: `waitForHold` in Node and `wait_for_hold`
+in Python check on it until someone answers, then collect the approval and
+verify that its receipt was signed for that hold. They also take a `200`'s
+decision from the signed receipt, where 2.1 read the response's unsigned
+`decision` field, so upgrade the clients before you add a hold.
 
 From 2.7.3, the gate refuses a request body unless every JSON reader would
 read it the same way. The body must be one JSON object that uses only the
@@ -268,6 +296,16 @@ keeps answering 200 and reports `"checkpoints": {"status": "degraded"}` for
 your monitoring to alert on. `--verify-chain` checks checkpoints with only
 the public key, and the auditor's verifier takes `--checkpoint-keys` and,
 for the lines your log pipeline kept, `--checkpoints <gate log>`.
+
+A person can countersign as well. The verifier in every export lets a
+witness, such as your CISO or an outside auditor, sign the same chain tip
+with a FIDO2 security key. It checks the whole export first, and the key
+signs only after a touch and the holder's PIN or fingerprint, with both
+facts inside the signature. The verifier refuses a countersignature that
+lacks either, and one from a synced passkey. `--witness-enroll`,
+`--witness-sign` and `--witness-keys` are described in the verifier's
+README inside the export. A countersignature can't be made unattended, so
+it adds to a KMS checkpoint and doesn't replace one.
 
 ## Gate an agent's MCP tools
 
@@ -377,7 +415,7 @@ generate the gate's signing key, keeping the public key it prints for step
 ```sh
 docker volume create archytan-lite
 docker run --rm -v archytan-lite:/data --entrypoint keygen \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.8.0 -out /data/signing_key.pem
+  ghcr.io/high-archytech-solutions/archytan-lite:2.9.0 -out /data/signing_key.pem
 docker run -d --name archytan-lite -p 127.0.0.1:8421:8421 \
   -v archytan-lite:/data -v "$PWD/config:/etc/archytan-lite:ro" \
   -e ARCHYTAN_LITE_CALLERS_PATH=/etc/archytan-lite/callers.json \
@@ -386,7 +424,7 @@ docker run -d --name archytan-lite -p 127.0.0.1:8421:8421 \
   -e ARCHYTAN_LITE_SIGNING_KEY_PATH=/data/signing_key.pem \
   -e ARCHYTAN_LITE_INSTANCE_URN=urn:archytan-lite:instance:agents \
   -e ARCHYTAN_LITE_CAPABILITIES=on \
-  ghcr.io/high-archytech-solutions/archytan-lite:2.8.0
+  ghcr.io/high-archytech-solutions/archytan-lite:2.9.0
 ```
 
 ### 3. Map the tools you want the agent to have

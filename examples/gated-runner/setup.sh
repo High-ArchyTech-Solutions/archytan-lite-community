@@ -13,7 +13,7 @@
 set -euo pipefail
 export MSYS_NO_PATHCONV=1 # Git Bash on Windows: pass /data/... to Docker as written
 cd "$(dirname "$0")"
-LITE_IMAGE="${LITE_IMAGE:-ghcr.io/high-archytech-solutions/archytan-lite:2.8.0}"
+LITE_IMAGE="${LITE_IMAGE:-ghcr.io/high-archytech-solutions/archytan-lite:2.9.0}"
 project="${COMPOSE_PROJECT_NAME:-archytan-gated-runner}"
 state="${STATE_DIR:-./secrets}"
 volume="${project}_gate-data"
